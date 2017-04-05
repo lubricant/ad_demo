@@ -29,26 +29,28 @@ class Binary(Node):
         assert left.result is not None
         assert right.result is not None
 
-        if self._gradient is not None:
-            self._gradient = None
+        if self._left_grad is not None and self._right_grad is not None:
+            self._gradient = lambda: None
             self._left_grad, self._right_grad = None, None
 
         self._result = self.eval_op(left.result, right.result)
 
     def backward(self, grad):
         assert grad is not None
-        assert grad.shape == self.shape
 
-        g_shape = grad.shape
+        g_shape = grad.shape if self.shape else ()
+        assert g_shape == self.shape
+
         l_shape = self._left.shape
         r_shape = self._right.shape
 
         assert len(g_shape) >= len(l_shape)
         assert len(g_shape) >= len(r_shape)
 
-        if not self._gradient:
-            self._left_grad, self._right_grad = np.zeros(l_shape), np.zeros(r_shape)
-            self._gradient = (self._left_grad, self._right_grad)
+        if self._left_grad is None and self._right_grad is None:
+            self._gradient = lambda: (self._left_grad, self._right_grad)
+            self._left_grad = 0 if l_shape == () else np.zeros(l_shape)
+            self._right_grad = 0 if r_shape == () else np.zeros(r_shape)
 
         left, right = self._left, self._right
         assert left.result is not None
@@ -56,11 +58,15 @@ class Binary(Node):
         l_grad, r_grad = self.eval_grad(left.result, right.result)
         l_grad, r_grad = l_grad * grad, r_grad * grad
 
-        assert l_grad.shape == left.shape
-        assert r_grad.shape == right.shape
+        assert l_grad.shape == l_shape if l_shape else isinstance(l_grad, (int, float))
+        assert r_grad.shape == r_shape if r_shape else isinstance(r_grad, (int, float))
 
         self._left_grad += reduce_grad_shape(l_grad, l_shape)
         self._right_grad += reduce_grad_shape(r_grad, r_shape)
+
+        print(self._left_grad, self._right_grad)
+        print(self.gradient)
+        print('123')
 
     def eval_op(self, left, right):
         raise NotImplementedError
@@ -82,8 +88,7 @@ def reduce_grad_shape(grad, op_shape):
     对求和后的 grad 进行 reshape 令其与 op_shape 一致后返回
     '''
 
-    assert grad.shape is not None
-    g_shape = grad.shape
+    g_shape = grad.shape if op_shape else ()
 
     if g_shape == op_shape:
         return grad

@@ -88,23 +88,24 @@ class Slice(Unitary):
         op_result = self._operand.result
         assert op_result is not None
 
-        if self._gradient is not None:
-            self._gradient = None
+        if self._op_grad is not None:
+            self._gradient = lambda: None
             self._op_grad = None
 
         self._result = op_result[self.__index]
 
     def backward(self, grad):
         assert grad is not None
-        assert grad.shape == self.shape
+        g_shape = grad.shape if self.shape else ()
+        assert g_shape == self.shape
 
         op_shape = self.shape
-        assert len(grad.shape) == len(op_shape)
+        assert len(g_shape) == len(op_shape)
 
-        if not self._gradient:
+        if not self._op_grad:
             g_shape = self._operand.shape
+            self._gradient = lambda: (self._op_grad,)
             self._op_grad = np.zeros(g_shape)
-            self._gradient = (self._op_grad,)
 
         self._op_grad[self.__index] += grad
 

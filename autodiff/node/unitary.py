@@ -16,12 +16,11 @@ class Unitary(Node):
             result_shape = operand.shape
 
         self._operand = operand
-        self._op_grad = np.zeros(result_shape)
+        self._op_grad = np.zeros(result_shape) if result_shape else 0
 
         self._shape = result_shape
         self._depth = operand.depth + 1
         self._dependency = (operand,)
-        self._gradient = (self._op_grad,)
 
     def __repr__(self):
         return self.name + '(' + str(self._operand) + ')'
@@ -30,25 +29,27 @@ class Unitary(Node):
         op_result = self._operand.result
         assert op_result is not None
 
-        if self._gradient is not None:
-            self._gradient = None
+        if self._op_grad is not None:
+            self._gradient = lambda: None
             self._op_grad = None
 
         self._result = self.eval_op(op_result)
 
     def backward(self, grad):
         assert grad is not None
-        assert grad.shape == self.shape
+
+        g_shape = grad.shape if self.shape else ()
+        assert g_shape == self.shape
 
         op_shape = self._operand.shape
-        assert len(grad.shape) == len(op_shape)
+        assert len(g_shape) == len(op_shape)
 
         op_result = self._operand.result
         assert op_result is not None
 
-        if not self._gradient:
-            self._op_grad = np.zeros(op_shape)
-            self._gradient = (self._op_grad,)
+        if not self._op_grad:
+            self._gradient = lambda: (self._op_grad,)
+            self._op_grad = np.zeros(op_shape) if op_shape else 0
 
         op_result = self._operand.result
         self._op_grad += grad * self.eval_grad(op_result)
@@ -58,3 +59,4 @@ class Unitary(Node):
 
     def eval_grad(self, operand):
         raise NotImplementedError
+

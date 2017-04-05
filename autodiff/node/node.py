@@ -6,7 +6,6 @@ class Node(object):
     __name = None
 
     _result = None
-    _gradient = None
     _dependency = ()
 
     name = property(lambda self: self.__name, lambda self, v: None, lambda self: None)
@@ -66,6 +65,7 @@ class Node(object):
         assert name is not None
         assert isinstance(name, str)
         self.__name = name
+        self._gradient = lambda: None
 
     def forward(self):
         raise NotImplementedError

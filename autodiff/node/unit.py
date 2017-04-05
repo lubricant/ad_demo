@@ -13,11 +13,9 @@ class Variable(Node):
         assert isinstance(value, (int, float, tuple, np.ndarray))
 
         self._depth = 0
-
-        self._grad = None
+        self._val_grad = None
 
         self._dependency = None
-        self._gradient = lambda: self._gradient
         self._result = None
 
         if isinstance(value, tuple):
@@ -50,16 +48,22 @@ class Variable(Node):
 
     def forward(self):
         assert self._result is not None
-        if self._gradient is not None:
-            self._grad = None
-            self._gradient = None
+        if self._val_grad is not None:
+            self._gradient = lambda: None
+            self._val_grad = None
 
     def backward(self, grad):
-        assert grad is not None
         assert self._result is not None
+        assert grad is not None
 
-        if self._gradient is None:
-            self._gradient = (np.zeros(self._shape))
+        g_shape = grad.shape if self.shape else ()
+        assert g_shape == self.shape
+
+        if self._val_grad is None:
+            self._gradient = lambda: (self._val_grad,)
+            self._val_grad = np.zeros(self._shape) if self._shape else 0
+
+        self._val_grad += grad
 
 
 class Const(Variable):

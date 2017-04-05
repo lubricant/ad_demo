@@ -35,14 +35,13 @@ class Tree(object):
             grad = node.gradient
             depend = node.dependency
 
+            if not grad and depend:
+                init_grad = np.ones(node.shape) if node.shape else 1
+                node.backward(init_grad)
+                grad = node.gradient
+
             if not depend:
                 continue
-
-            if not grad:
-                def init_grad(dep):
-                    assert dep.shape is not None
-                    return 1 if dep.shape == () else np.ones(dep.shape)
-                grad = tuple(map(init_grad, depend))
 
             assert len(grad) == len(depend)
 
