@@ -8,6 +8,25 @@ class Slice(Unitary):
 
     def __init__(self, array, index):
 
+        # 根据传入的索引估计根据索引的名称
+        # 分成 3 种可能的索引值进行处理
+        def guess_name():
+
+            if isinstance(index, int):
+                return '[' + index + ']'
+
+            if isinstance(index, slice):
+                return '[' + index.start + ':' + index.stop + ']'
+
+            if isinstance(index, tuple):
+                idx_list = []
+                for idx in index:
+                    if isinstance(idx, int):
+                        idx_list.append(str(idx))
+                    else:
+                        idx_list.append(idx.start + ':' + idx.stop)
+                return '[' + ','.join(idx_list) + ']'
+
         # 根据传入的索引估计根据索引取值的形状
         # 分成 3 种可能的索引值进行处理
         def guess_shape():
@@ -20,7 +39,7 @@ class Slice(Unitary):
                 return () if is_vec else arr_shape[1:]
 
             if isinstance(index, slice):
-                assert not index.step
+                assert not index.step  # 不支持自定义步长
                 beg = index.start if index.start else 0
                 end = index.stop if index.stop else arr_shape[0]
                 assert 0 < (end-beg) < arr_shape[0]
@@ -58,8 +77,12 @@ class Slice(Unitary):
 
                 return prefix + suffix
 
-        super(Unitary).__init__(array, guess_shape())
+        super().__init__(guess_name(), array, guess_shape())
         self.__index = index
+
+    def __repr__(self):
+        arr_name = str(self._operand)
+        return arr_name + self.name
 
     def forward(self):
         op_result = self._operand.result
@@ -84,3 +107,4 @@ class Slice(Unitary):
             self._gradient = (self._op_grad,)
 
         self._op_grad[self.__index] += grad
+

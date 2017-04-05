@@ -8,7 +8,9 @@ class Unitary(Node):
 
     _op_grad = None
 
-    def __init__(self, operand, result_shape=None):
+    def __init__(self, name, operand, result_shape=None):
+
+        super().__init__(name)
 
         if result_shape is None:
             result_shape = operand.shape
@@ -20,6 +22,9 @@ class Unitary(Node):
         self._depth = operand.depth + 1
         self._dependency = (operand,)
         self._gradient = (self._op_grad,)
+
+    def __repr__(self):
+        return self.name + '(' + str(self._operand) + ')'
 
     def forward(self):
         op_result = self._operand.result

@@ -1,12 +1,10 @@
 
 import autodiff as ad
 
-s = set()
-s.add((2,'b'))
-s.add((1,'a'))
-print(s)
+a = ad.var('a', 1)
+b = ad.var('b', 2)
+c = a + b
 
-s = sorted(s, key=lambda x:x[0])
-print(s)
-s.reverse()
-print(s)
+ad.eval(c)
+print(c.result)
+print(c.gradient)

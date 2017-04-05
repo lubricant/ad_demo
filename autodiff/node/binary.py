@@ -8,7 +8,9 @@ class Binary(Node):
 
     _left_grad, _right_grad = None, None
 
-    def __init__(self, left, right, guess_func=None):
+    def __init__(self, name, left, right, guess_func=None):
+
+        super().__init__(name)
 
         self._left, self._right = left, right
 
@@ -18,6 +20,9 @@ class Binary(Node):
         self._shape = guess_func(left.shape, right.shape)
         self._depth = np.maximum(left.depth, right.depth) + 1
         self._dependency = (self._left, self._right)
+
+    def __repr__(self):
+        return str(self._left) + self.name + str(self._right)
 
     def forward(self):
         left, right = self._left, self._right

@@ -3,16 +3,18 @@ class Node(object):
 
     _depth = -1
     _shape = ()
+    __name = None
 
     _result = None
-    _gradient = ()
+    _gradient = None
     _dependency = ()
 
+    name = property(lambda self: self.__name, lambda self, v: None, lambda self: None)
     shape = property(lambda self: self._shape, lambda self, v: None, lambda self: None)
     depth = property(lambda self: self._depth, lambda self, v: None, lambda self: None)
 
     result = property(lambda self: self._result, lambda self, v: None, lambda self: None)
-    gradient = property(lambda self: self._gradient, lambda self, v: None, lambda self: None)
+    gradient = property(lambda self: self._gradient(), lambda self, v: None, lambda self: None)
     dependency = property(lambda self: self._dependency, lambda self, v: None, lambda self: None)
 
     def __add__(self, o):
@@ -59,6 +61,11 @@ class Node(object):
                 isinstance(index, tuple))
         from . import Slice
         return Slice(self, index)
+
+    def __init__(self, name):
+        assert name is not None
+        assert isinstance(name, str)
+        self.__name = name
 
     def forward(self):
         raise NotImplementedError

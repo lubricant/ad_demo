@@ -8,7 +8,7 @@ from autodiff.node.binary import Binary
 class Plus(Binary):
 
     def __init__(self, a, b):
-        super(Binary).__init__(a, b)
+        super().__init__('+', a, b)
 
     def eval_op(self, left, right):
         return left + right
@@ -20,7 +20,7 @@ class Plus(Binary):
 class Minus(Binary):
 
     def __init__(self, a, b):
-        super(Binary).__init__(a, b)
+        super().__init__('-', a, b)
 
     def eval_op(self, left, right):
         return left - right

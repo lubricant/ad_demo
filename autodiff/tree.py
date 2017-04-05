@@ -31,7 +31,7 @@ class Tree(object):
         for node in self._node_set:
             node.forward()
 
-        for node in self._node_set.reverse():
+        for node in self._node_set[::-1]:
             grad = node.gradient
             depend = node.dependency
 
@@ -39,10 +39,10 @@ class Tree(object):
                 continue
 
             if not grad:
-                def default_grad(dep):
-                    assert dep.shape
+                def init_grad(dep):
+                    assert dep.shape is not None
                     return 1 if dep.shape == () else np.ones(dep.shape)
-                grad = map(default_grad, depend)
+                grad = tuple(map(init_grad, depend))
 
             assert len(grad) == len(depend)
 

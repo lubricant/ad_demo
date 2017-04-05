@@ -8,7 +8,7 @@ import numpy as np
 class Times(Binary):
 
     def __init__(self, a, b):
-        super(Binary).__init__(a, b)
+        super().__init__('*', a, b)
 
     def eval_op(self, left, right):
         return left * right
@@ -20,7 +20,7 @@ class Times(Binary):
 class Divide(Binary):
 
     def __init__(self, a, b):
-        super(Binary).__init__(a, b)
+        super().__init__('/', a, b)
 
     def eval_op(self, left, right):
         return left / right

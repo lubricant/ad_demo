@@ -7,7 +7,7 @@ import numpy as np
 class Sin(Unitary):
 
     def __init__(self, o):
-        super(Unitary).__init__(o)
+        super().__init__('sin', o)
 
     def eval_op(self, operand):
         return np.sin(operand)
@@ -19,7 +19,7 @@ class Sin(Unitary):
 class Cos(Unitary):
 
     def __init__(self, o):
-        super(Unitary).__init__(o)
+        super().__init__('cos', o)
 
     def eval_op(self, operand):
         return np.cos(operand)

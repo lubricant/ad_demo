@@ -5,9 +5,9 @@ import autodiff.node
 import numpy as np
 
 
-def var(val):
+def var(name, val):
     val = __ensure_not_list(val)
-    return node.Variable(val)
+    return node.Variable(name, val)
 
 
 def const(val):
@@ -43,6 +43,11 @@ def log(x):
 def exp(x):
     x = __ensure_node(x)
     return node.Exp(x)
+
+
+def eval(x):
+    from .tree import Tree
+    Tree(x).exec()
 
 
 def __ensure_node(value):

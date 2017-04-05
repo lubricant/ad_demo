@@ -9,7 +9,7 @@ import numpy as np
 class Pow(Binary):
 
     def __init__(self, a, b):
-        super(Binary).__init__(a, b)
+        super().__init__('**', a, b)
 
     def eval_op(self, left, right):
         return left ** right
@@ -24,7 +24,7 @@ class Pow(Binary):
 class Exp(Unitary):
 
     def __init__(self, o):
-        super(Unitary).__init__(o)
+        super().__init__('exp', o)
 
     def eval_op(self, operand):
         return np.exp(operand)
@@ -36,7 +36,7 @@ class Exp(Unitary):
 class Log(Unitary):
 
     def __init__(self, o):
-        super(Unitary).__init__(o)
+        super().__init__('log', o)
 
     def eval_op(self, operand):
         return np.log(operand)

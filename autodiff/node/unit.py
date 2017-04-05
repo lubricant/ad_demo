@@ -6,17 +6,18 @@ from .node import Node
 
 class Variable(Node):
 
-    def __init__(self, value):
+    def __init__(self, name, value):
+        super().__init__(name)
+
         assert value is not None
         assert isinstance(value, (int, float, tuple, np.ndarray))
 
         self._depth = 0
 
-        self._value = None
         self._grad = None
 
         self._dependency = None
-        self._gradient = None
+        self._gradient = lambda: self._gradient
         self._result = None
 
         if isinstance(value, tuple):
@@ -27,12 +28,14 @@ class Variable(Node):
             else:
                 self._shape = value.shape
 
-            self._value = value
-            self._result = (value,)
+            self._result = value
+
+    def __repr__(self):
+        return self.name
 
     @property
     def value(self):
-        return self._value
+        return self._result
 
     @value.setter
     def value(self, value):
@@ -43,8 +46,7 @@ class Variable(Node):
             assert self._shape == value.shape
         else:
             raise ValueError
-        self._value = value
-        self._result = (value,)
+        self._result = value
 
     def forward(self):
         assert self._result is not None
@@ -63,7 +65,7 @@ class Variable(Node):
 class Const(Variable):
 
     def __init__(self, value):
-        super(Variable).__init__(value)
+        super(Variable).__init__(str(value), value)
 
     def backward(self, grad):
         pass
