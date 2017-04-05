@@ -7,7 +7,7 @@ from .node import Node
 class Variable(Node):
 
     def __init__(self, name, value):
-        super().__init__(name)
+        super().__init__(name, 0)
 
         assert value is not None
         assert isinstance(value, (int, float, tuple, np.ndarray))
@@ -29,7 +29,7 @@ class Variable(Node):
             self._result = value
 
     def __repr__(self):
-        return self.name
+        return self.code
 
     @property
     def value(self):

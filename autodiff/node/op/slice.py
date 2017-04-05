@@ -10,7 +10,7 @@ class Slice(Unitary):
 
         # 根据传入的索引估计根据索引的名称
         # 分成 3 种可能的索引值进行处理
-        def guess_name():
+        def guess_code():
 
             if isinstance(index, int):
                 return '[' + index + ']'
@@ -77,12 +77,12 @@ class Slice(Unitary):
 
                 return prefix + suffix
 
-        super().__init__(guess_name(), array, guess_shape())
+        super().__init__(array, guess_code(), guess_shape(), prior=1)
         self.__index = index
 
     def __repr__(self):
         arr_name = str(self._operand)
-        return arr_name + self.name
+        return arr_name + self.code
 
     def forward(self):
         op_result = self._operand.result

@@ -7,7 +7,7 @@ from autodiff.node.binary import Binary
 class Max(Binary):
 
     def __init__(self, a, b):
-        super().__init__('max', a, b)
+        super().__init__(a, b, code='max', prior=0)
 
     def eval_op(self, left, right):
         return np.maximum(left, right)
@@ -24,7 +24,7 @@ class Max(Binary):
 class Min(Binary):
 
     def __init__(self, a, b):
-        super().__init__('min', a, b)
+        super().__init__(a, b, code='min', prior=0)
 
     def eval_op(self, left, right):
         return np.minimum(left, right)

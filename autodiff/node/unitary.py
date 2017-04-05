@@ -8,9 +8,9 @@ class Unitary(Node):
 
     _op_grad = None
 
-    def __init__(self, name, operand, result_shape=None):
+    def __init__(self, operand, code, result_shape=None, prior=0):
 
-        super().__init__(name)
+        super().__init__(code, prior)
 
         if result_shape is None:
             result_shape = operand.shape
@@ -23,7 +23,7 @@ class Unitary(Node):
         self._dependency = (operand,)
 
     def __repr__(self):
-        return self.name + '(' + str(self._operand) + ')'
+        return self.code + '(' + str(self._operand) + ')'
 
     def forward(self):
         op_result = self._operand.result

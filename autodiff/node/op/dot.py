@@ -9,7 +9,7 @@ from autodiff.node.binary import reduce_grad_shape
 class MatMul(Binary):
 
     def __init__(self, a, b):
-        super().__init__('@', a, b, guess_mat_op_result_shape)
+        super().__init__(a, b, code='@', prior=3, guess_func=guess_mat_op_result_shape)
 
     def eval_op(self, left, right):
         return np.matmul(left, right)

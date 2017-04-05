@@ -3,14 +3,18 @@ class Node(object):
 
     _depth = -1
     _shape = ()
-    __name = None
+
+    __code = None
+    __prior = -1
 
     _result = None
     _dependency = ()
 
-    name = property(lambda self: self.__name, lambda self, v: None, lambda self: None)
     shape = property(lambda self: self._shape, lambda self, v: None, lambda self: None)
     depth = property(lambda self: self._depth, lambda self, v: None, lambda self: None)
+
+    code = property(lambda self: self.__code, lambda self, v: None, lambda self: None)
+    prior = property(lambda self: self.__prior, lambda self, v: None, lambda self: None)
 
     result = property(lambda self: self._result, lambda self, v: None, lambda self: None)
     gradient = property(lambda self: self._gradient(), lambda self, v: None, lambda self: None)
@@ -61,10 +65,12 @@ class Node(object):
         from . import Slice
         return Slice(self, index)
 
-    def __init__(self, name):
-        assert name is not None
-        assert isinstance(name, str)
-        self.__name = name
+    def __init__(self, code, prior):
+        assert code is not None
+        assert isinstance(code, str)
+        assert isinstance(prior, int) and prior >= 0
+        self.__code = code
+        self.__prior = prior
         self._gradient = lambda: None
 
     def forward(self):

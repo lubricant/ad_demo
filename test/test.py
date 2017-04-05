@@ -10,7 +10,18 @@ print(c)
 print(c.result)
 print(a.gradient, b.gradient)
 
+print('--------------------------------')
+
 c = ad.sin(c)
+ad.eval(c)
+print(c)
+print(c.result)
+print(a.gradient, b.gradient)
+
+print('--------------------------------')
+
+c = a + b
+c = c * c
 ad.eval(c)
 print(c)
 print(c.result)

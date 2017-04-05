@@ -8,9 +8,9 @@ class Binary(Node):
 
     _left_grad, _right_grad = None, None
 
-    def __init__(self, name, left, right, guess_func=None):
+    def __init__(self, left, right, code, prior, guess_func=None):
 
-        super().__init__(name)
+        super().__init__(code, prior)
 
         self._left, self._right = left, right
 
@@ -22,7 +22,16 @@ class Binary(Node):
         self._dependency = (self._left, self._right)
 
     def __repr__(self):
-        return str(self._left) + self.name + str(self._right)
+        l_str, r_str = str(self._left), str(self._right)
+        if self.prior is 0:
+            return self.code + '(' + l_str + ',' + r_str + ')'
+        else:
+            l_prior, r_prior = self._left.prior, self._right.prior
+            if l_prior > self.prior:
+                l_str = '(' + l_str + ')'
+            if r_prior > self.prior:
+                r_str = '(' + r_str + ')'
+            return l_str + self.code + r_str
 
     def forward(self):
         left, right = self._left, self._right
@@ -63,10 +72,6 @@ class Binary(Node):
 
         self._left_grad += reduce_grad_shape(l_grad, l_shape)
         self._right_grad += reduce_grad_shape(r_grad, r_shape)
-
-        print(self._left_grad, self._right_grad)
-        print(self.gradient)
-        print('123')
 
     def eval_op(self, left, right):
         raise NotImplementedError
