@@ -82,6 +82,8 @@ class Slice(Unitary):
 
     def __repr__(self):
         arr_name = str(self._operand)
+        if self._operand.prior > self.prior:
+            arr_name = '(' + arr_name + ')'
         return arr_name + self.code
 
     def forward(self):
