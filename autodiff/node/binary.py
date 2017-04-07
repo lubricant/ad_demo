@@ -65,13 +65,18 @@ class Binary(Node):
         assert left.result is not None
         assert right.result is not None
         l_grad, r_grad = self.eval_grad(left.result, right.result)
+
         l_grad, r_grad = l_grad * grad, r_grad * grad
+        l_grad = reduce_grad_shape(l_grad, l_shape)
+        r_grad = reduce_grad_shape(r_grad, r_shape)
 
-        assert l_grad.shape == l_shape if l_shape else isinstance(l_grad, (int, float))
-        assert r_grad.shape == r_shape if r_shape else isinstance(r_grad, (int, float))
+        print(l_shape)
+        print(l_grad)
+        print(r_shape)
+        print(r_grad)
 
-        self._left_grad += reduce_grad_shape(l_grad, l_shape)
-        self._right_grad += reduce_grad_shape(r_grad, r_shape)
+        self._left_grad += l_grad
+        self._right_grad += r_grad
 
     def eval_op(self, left, right):
         raise NotImplementedError
@@ -94,6 +99,10 @@ def reduce_grad_shape(grad, op_shape):
     '''
 
     g_shape = grad.shape if op_shape else ()
+
+    print('----')
+    print(g_shape, op_shape)
+    print(grad)
 
     if g_shape == op_shape:
         return grad
