@@ -45,6 +45,16 @@ def exp(x):
     return node.Exp(x)
 
 
+def tanh(x):
+    x = __ensure_node(x)
+    return node.Tanh(x)
+
+
+def sigmoid(x):
+    x = __ensure_node(x)
+    return node.Sigmoid(x)
+
+
 def eval(x):
     from .tree import Tree
     Tree(x).exec()

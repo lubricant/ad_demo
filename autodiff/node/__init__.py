@@ -14,5 +14,6 @@ from .op.pow import Pow, Exp, Log
 from .op.slice import Slice
 from .op.times import Times, Divide
 from .op.trigon import Sin, Cos
-
+from .op.hype import Tanh
+from .op.sigmoid import Sigmoid
 

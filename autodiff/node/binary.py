@@ -70,11 +70,6 @@ class Binary(Node):
         l_grad = reduce_grad_shape(l_grad, l_shape)
         r_grad = reduce_grad_shape(r_grad, r_shape)
 
-        print(l_shape)
-        print(l_grad)
-        print(r_shape)
-        print(r_grad)
-
         self._left_grad += l_grad
         self._right_grad += r_grad
 
@@ -98,11 +93,7 @@ def reduce_grad_shape(grad, op_shape):
     对求和后的 grad 进行 reshape 令其与 op_shape 一致后返回
     '''
 
-    g_shape = grad.shape if op_shape else ()
-
-    print('----')
-    print(g_shape, op_shape)
-    print(grad)
+    g_shape = () if isinstance(grad, (int, float)) else grad.shape
 
     if g_shape == op_shape:
         return grad
