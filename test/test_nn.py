@@ -23,9 +23,7 @@ tick = np.arange(ax_min, ax_max, ax_step)
 patches = PatchCollection([Rectangle((x, y), ax_step, ax_step) for y in tick for x in tick])
 
 buf = []
-scatter = (
-    ax.scatter([], [], color='indianred', marker='o', linewidths=5, animated=True),
-    ax.scatter([], [], color='seagreen', marker='o', linewidths=5, animated=True))
+scatter = []
 
 
 def init_data():
@@ -47,31 +45,29 @@ def init_data():
 
 def circle_data():
     data = []
-    for i in range(30):
+    for i in range(50):
         t = (np.random.rand() - 0.5) * np.pi
         r = (np.random.rand() - 0.5) * 1.5
         data.append((r * np.array([np.sin(t), np.cos(t)]), 1))
 
-    for i in range(30):
+    for i in range(50):
         t = (np.random.rand() - 0.5) * np.pi
         r = (np.random.rand() - 0.5)
-        r += np.sign(r) * 2.5
+        r += np.sign(r) * 2.
         data.append((r * np.array([np.sin(t), np.cos(t)]), 0))
     return data
 
 
 def spiral_data():
     data = []
-    for i in range(30):
-        r = i / 30. + (np.random.rand() - 0.5) / 0.5
-        t = 1.25 * i / 30.  * np.pi + (np.random.rand() - 0.5) / 0.5
-        data.append((r * np.array([np.sin(t), np.cos(t)]), 1))
 
-    # for i in range(30):
-    #     r = i / 30. + (np.random.rand() - 0.5) / 0.5
-    #     t = 1.25 * i / 30. * np.pi + np.pi + (np.random.rand() - 0.5) / 0.5
-    #     data.append((r * np.array([np.sin(t), np.cos(t)]), 0))
+    for theta in np.linspace(0, 3 * np.pi, num=50):
+        r = (theta ** 2) / 35
+        data.append((np.array([r * np.cos(theta), r * np.sin(theta)]), 0))
 
+    for theta in np.linspace(0, 3*np.pi, num=50):
+        r = (theta ** 2) / 35
+        data.append((np.array([r * np.cos(theta + np.pi), r * np.sin(theta + np.pi)]), 1))
     return data
 
 
@@ -94,37 +90,30 @@ def init_plot():
     patches.set_linewidth(0.01)
     ax.add_collection(patches)
 
-    for sca in scatter:
-        sca.set_offsets([[], []])
+    buf[:] = circle_data()
 
-    buf[:] = spiral_data()
-
-    return (patches,) + scatter
+    return (patches,) + tuple(scatter)
 
 
 def update_plot(i):
 
-    colors = [clr.cnames['pink' if x == y else 'lightgreen'] for y in tick for x in tick]
+    colors = [clr.cnames['lightcoral' if x == y else 'lightgreen'] for y in tick for x in tick]
     patches.set_color(colors)
 
     if buf:
+        scat_pt = [[[],[]],[[],[]]]
 
-        lab_0_x, lab_0_y = [], []
-        lab_1_x, lab_1_y = [], []
         for feature, label in buf:
-            if label:
-                lab_1_x.append(feature[0])
-                lab_1_y.append(feature[1])
-            else:
-                lab_0_x.append(feature[0])
-                lab_0_y.append(feature[1])
+            scat_pt[label][0].append(feature[0])
+            scat_pt[label][1].append(feature[1])
 
-        scatter[0].set_offsets([lab_0_x, lab_0_y])
-        scatter[1].set_offsets([lab_1_x, lab_1_y])
+        scatter[:] = [
+          ax.scatter(scat_pt[0][0], scat_pt[0][1], color='indianred', marker='o', linewidths=5),
+          ax.scatter(scat_pt[1][0], scat_pt[1][1], color='seagreen', marker='o', linewidths=5)]
 
         buf[:] = []
 
-    return (patches,) + scatter
+    return (patches,) + tuple(scatter)
 
 
 if __name__ == '__main__':
