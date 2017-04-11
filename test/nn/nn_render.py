@@ -86,10 +86,11 @@ def init_btn():
 class BinaryClassifierModel(object):
 
     def update(self, batch):
-        raise NotImplementedError
+        print(batch)
+        pass
 
     def predict(self, x, y):
-        raise NotImplementedError
+        return 1 if x == y else 0
 
 
 class ModelRender(object):
@@ -99,7 +100,7 @@ class ModelRender(object):
     def __init__(self, model):
         self.model = model
         self.ani = animation.FuncAnimation(
-            self.fig, lambda i: self.update_plot(), init_func=lambda: self.init_plot(), interval=500, blit=True)
+            self.fig, lambda i: self.update_plot(), init_func=lambda: self.init_plot(), interval=5, blit=True)
         plt.show()
 
     def init_plot(self):
@@ -152,3 +153,6 @@ class ModelRender(object):
 
         return (patches,) + tuple(scatter)
 
+
+if __name__ == '__main__':
+    ModelRender(BinaryClassifierModel())

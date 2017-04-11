@@ -241,7 +241,7 @@ def guess_mat_op_result_shape(a_shape, b_shape):
 
     # 规则 3
     a_mat = ((1,) if a_dim == 1 else ()) + a_shape
-    b_mat = ((1,) if b_dim == 1 else ()) + b_shape
+    b_mat = b_shape + ((1,) if b_dim == 1 else ())
 
     # 规则 4
     a_row, a_col = a_mat[-2:]
@@ -250,7 +250,7 @@ def guess_mat_op_result_shape(a_shape, b_shape):
     if a_col != b_row:
         raise ShapeError(a_shape, b_shape, True)
 
-    if len(a_mat) == len(b_mat) == 2:
+    if a_dim == b_dim == 2:
         return a_row, b_col
 
     # 规则 5

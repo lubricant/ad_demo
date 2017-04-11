@@ -235,7 +235,6 @@ class MatMul(Binary):
                 return l_grad, r_grad
 
             if l_dim > 2:
-                print(l_shape)
                 assert g_shape[-1] == l_shape[-2]
                 grad_t = grad.reshape(g_shape[:-1] + (g_shape[-1], 1))
                 l_grad = grad_t @ right.reshape((1,) + r_shape)
