@@ -4,10 +4,10 @@ import numpy as np
 from .node import Node
 
 
-class Variable(Node):
+class Const(Node):
 
-    def __init__(self, name, value):
-        super().__init__(name, 0)
+    def __init__(self, value, name=None):
+        super().__init__(str(value) if not name else name, 0)
 
         assert value is not None
         assert isinstance(value, (int, float, tuple, np.ndarray))
@@ -17,6 +17,7 @@ class Variable(Node):
 
         self._dependency = None
         self._result = None
+        self._active = False
 
         if isinstance(value, tuple):
             self._shape = value
@@ -53,7 +54,33 @@ class Variable(Node):
             self._val_grad = None
 
     def backward(self, grad):
+        pass
+
+
+class Variable(Const):
+
+    def __init__(self, name, value):
+        super().__init__(value, name)
+        self._active = True
+
+    @property
+    def active(self):
+        return self._active
+
+    @active.setter
+    def active(self, status):
+        assert status is not None
+        if not isinstance(status, bool):
+            raise ValueError
+        self._active = status
+
+    def backward(self, grad):
         assert self._result is not None
+
+        if not self.active:
+            self._gradient = lambda: (None,)
+            return
+
         assert grad is not None
 
         g_shape = grad.shape if self.shape else ()
@@ -64,18 +91,5 @@ class Variable(Node):
             self._val_grad = np.zeros(self._shape) if self._shape else 0
 
         self._val_grad += grad
-
-
-class Const(Variable):
-
-    def __init__(self, value):
-        super(Variable).__init__(str(value), value)
-
-    def backward(self, grad):
-        pass
-
-
-
-
 
 

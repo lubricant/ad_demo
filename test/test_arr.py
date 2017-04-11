@@ -30,8 +30,17 @@ print(a.gradient, b.gradient)
 
 print('--------------------------------')
 
+c = a * b[1]
+ad.eval(c)
+print(c)
+print(c.result)
+print(a.gradient, b.gradient)
+
+print('--------------------------------')
+
 c = a @ b
 ad.eval(c)
 print(c)
 print(c.result)
 print(a.gradient, b.gradient)
+

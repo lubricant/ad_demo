@@ -13,10 +13,10 @@ class Slice(Unitary):
         def guess_code():
 
             if isinstance(index, int):
-                return '[' + index + ']'
+                return '[' + str(index) + ']'
 
             if isinstance(index, slice):
-                return '[' + index.start + ':' + index.stop + ']'
+                return '[' + str(index.start) + ':' + str(index.stop) + ']'
 
             if isinstance(index, tuple):
                 idx_list = []
@@ -86,17 +86,15 @@ class Slice(Unitary):
             arr_name = '(' + arr_name + ')'
         return arr_name + self.code
 
-    def forward(self):
-        op_result = self._operand.result
-        assert op_result is not None
-
-        if self._op_grad is not None:
-            self._gradient = lambda: None
-            self._op_grad = None
-
-        self._result = op_result[self.__index]
+    def eval_op(self, operand):
+        return operand[self.__index]
 
     def backward(self, grad):
+
+        if not self.active:
+            self._gradient = lambda: (None,)
+            return
+
         assert grad is not None
         g_shape = grad.shape if self.shape else ()
         assert g_shape == self.shape

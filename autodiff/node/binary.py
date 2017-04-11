@@ -42,9 +42,15 @@ class Binary(Node):
             self._gradient = lambda: None
             self._left_grad, self._right_grad = None, None
 
+        self._active = left.active or right.active
         self._result = self.eval_op(left.result, right.result)
 
     def backward(self, grad):
+
+        if not self.active:
+            self._gradient = lambda: (None, None)
+            return
+
         assert grad is not None
 
         g_shape = grad.shape if self.shape else ()
@@ -255,8 +261,7 @@ def guess_mat_op_result_shape(a_shape, b_shape):
 
 class ShapeError(ValueError):
     def __init__(self, a_shape, b_shape, mat_op=False):
-        super(Exception).__init__(
-            ('shape %s and %s are not compatible'
-             '' if not mat_op else 'for mat op'
-             ) % (a_shape, b_shape))
+        err = 'shape %s and %s are not compatible' % (a_shape, b_shape)
+        err += ('' if not mat_op else 'for mat op')
+        super().__init__(err)
 

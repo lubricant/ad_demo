@@ -7,6 +7,7 @@ class Node(object):
     __code = None
     __prior = -1
 
+    _active = True
     _result = None
     _dependency = ()
 
@@ -16,6 +17,7 @@ class Node(object):
     code = property(lambda self: self.__code, lambda self, v: None, lambda self: None)
     prior = property(lambda self: self.__prior, lambda self, v: None, lambda self: None)
 
+    active = property(lambda self: self._active, lambda self, v: None, lambda self: None)
     result = property(lambda self: self._result, lambda self, v: None, lambda self: None)
     gradient = property(lambda self: self._gradient(), lambda self, v: None, lambda self: None)
     dependency = property(lambda self: self._dependency, lambda self, v: None, lambda self: None)

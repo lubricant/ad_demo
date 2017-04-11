@@ -26,10 +26,13 @@ class Tree(object):
 
         self._node_set = sorted(node_set, key=lambda node: node.depth)
 
-    def exec(self, feed_dict=None):
+    def exec(self, eval_grad=True):
 
         for node in self._node_set:
             node.forward()
+
+        if not eval_grad:
+            return
 
         for node in self._node_set[::-1]:
             grad = node.gradient

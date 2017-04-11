@@ -33,9 +33,15 @@ class Unitary(Node):
             self._gradient = lambda: None
             self._op_grad = None
 
+        self._active = self._operand.active
         self._result = self.eval_op(op_result)
 
     def backward(self, grad):
+
+        if not self.active:
+            self._gradient = lambda: (None,)
+            return
+
         assert grad is not None
 
         g_shape = grad.shape if self.shape else ()

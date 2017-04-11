@@ -15,6 +15,11 @@ class MatMul(Binary):
         return np.matmul(left, right)
 
     def backward(self, grad):
+
+        if not self.active:
+            self._gradient = lambda: (None, None)
+            return
+
         assert grad is not None
 
         g_shape = grad.shape if self.shape else ()
@@ -27,7 +32,6 @@ class MatMul(Binary):
             self._gradient = lambda: (self._left_grad, self._right_grad)
             self._left_grad = 0 if l_shape == () else np.zeros(l_shape)
             self._right_grad = 0 if r_shape == () else np.zeros(r_shape)
-
 
         left, right = self._left, self._right
         assert left.result is not None
