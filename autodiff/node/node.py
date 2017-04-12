@@ -67,6 +67,10 @@ class Node(object):
         from . import Slice
         return Slice(self, index)
 
+    def __neg__(self):
+        from . import Neg
+        return Neg(self)
+
     def __init__(self, code, prior):
         assert code is not None
         assert isinstance(code, str)

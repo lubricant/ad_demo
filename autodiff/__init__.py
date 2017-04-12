@@ -55,9 +55,9 @@ def sigmoid(x):
     return node.Sigmoid(x)
 
 
-def eval(x):
+def eval(x, eval_grad=True):
     from .tree import Tree
-    Tree(x).exec()
+    Tree(x).exec(eval_grad)
 
 
 def __ensure_node(value):

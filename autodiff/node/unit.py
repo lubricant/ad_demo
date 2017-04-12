@@ -7,7 +7,6 @@ from .node import Node
 class Const(Node):
 
     def __init__(self, value, name=None):
-        super().__init__(str(value) if not name else name, 0)
 
         assert value is not None
         assert isinstance(value, (int, float, tuple, np.ndarray))
@@ -28,6 +27,9 @@ class Const(Node):
                 self._shape = value.shape
 
             self._result = value
+
+        super().__init__(
+            (name if name else '?' if self.result is None else str(value)), 0)
 
     def __repr__(self):
         return self.code

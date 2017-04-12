@@ -9,7 +9,7 @@ from .unitary import Unitary
 
 from .op.comp import Max, Min
 from .op.dot import MatMul
-from .op.plus import Plus, Minus
+from .op.plus import Plus, Minus, Neg
 from .op.pow import Pow, Exp, Log
 from .op.slice import Slice
 from .op.times import Times, Divide

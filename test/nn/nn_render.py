@@ -87,7 +87,7 @@ class BinaryClassifierModel(object):
 
     def update(self, batch):
         print(batch)
-        pass
+        return 0
 
     def predict(self, x, y):
         return 1 if x == y else 0
@@ -130,20 +130,18 @@ class ModelRender(object):
     def update_plot(self):
 
         if buf:
-            batch = []
             scat_pt = [[[], []], [[], []]]
 
             for feature, label in buf:
                 scat_pt[label][0].append(feature[0])
                 scat_pt[label][1].append(feature[1])
-                batch.append(feature)
 
             ax = self.ax
             scatter[:] = [
               ax.scatter(scat_pt[0][0], scat_pt[0][1], color='indianred', marker='o', linewidths=5),
               ax.scatter(scat_pt[1][0], scat_pt[1][1], color='seagreen', marker='o', linewidths=5)]
 
-            data[:] = batch
+            data[:] = buf
             buf[:] = []
 
         model = self.model
