@@ -15,11 +15,11 @@ from matplotlib.widgets import Button, RadioButtons
 import matplotlib.pyplot as plt
 import matplotlib.colors as clr
 
-N = 60
+N = 40
 ax_min, ax_max = -4, 4
 ax_step = (ax_max-ax_min) / N
 
-tick = np.arange(ax_min, ax_max, ax_step)
+tick = np.arange(ax_min, ax_max+ax_step, ax_step)
 patches = PatchCollection([Rectangle((x, y), ax_step, ax_step) for y in tick for x in tick])
 
 buf = []
@@ -100,7 +100,7 @@ class ModelRender(object):
     def __init__(self, model):
         self.model = model
         self.ani = animation.FuncAnimation(
-            self.fig, lambda i: self.update_plot(), init_func=lambda: self.init_plot(), interval=5, blit=True)
+            self.fig, lambda i: self.update_plot(), init_func=lambda: self.init_plot(), interval=50, blit=True)
         plt.show()
 
     def init_plot(self):
@@ -148,6 +148,8 @@ class ModelRender(object):
         model.update(data)
         colors = [clr.cnames['lightcoral' if model.predict(x, y) else 'lightgreen'] for y in tick for x in tick]
         patches.set_color(colors)
+
+        # print([model.predict(x, y) for y in tick for x in tick])
 
         return (patches,) + tuple(scatter)
 
