@@ -10,11 +10,11 @@ import autodiff as ad
 
 class NeuralNetwork(object):
 
-    def __init__(self, layer_num=2):
+    def __init__(self, layer_num=3):
 
         assert layer_num >= 2
 
-        self.step = 0.3
+        self.step = 0.01
         self.weight = []
 
         self.input = ad.const((2,))
@@ -34,6 +34,9 @@ class NeuralNetwork(object):
 
         self.expect = ad.const(())
         self.loss = (self.output - self.expect) ** ad.const(2)
+
+        print(self.output)
+        print(self.loss)
 
     def __repr__(self):
         return str(self.output)
@@ -61,6 +64,9 @@ class NeuralNetwork(object):
             for i in range(layer_num):
                 w_grad, = self.weight[i].gradient
                 weight_grad_sum[i] += w_grad
+
+        # if self.step < 100:
+        #     self.step += 1
 
         for i in range(layer_num):
             weight_grad = weight_grad_sum[i] / batch_num

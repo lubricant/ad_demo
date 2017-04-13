@@ -100,7 +100,7 @@ class ModelRender(object):
     def __init__(self, model):
         self.model = model
         self.ani = animation.FuncAnimation(
-            self.fig, lambda i: self.update_plot(), init_func=lambda: self.init_plot(), interval=50, blit=True)
+            self.fig, lambda i: self.update_plot(), init_func=lambda: self.init_plot(), interval=10, blit=True)
         plt.show()
 
     def init_plot(self):
@@ -145,7 +145,15 @@ class ModelRender(object):
             buf[:] = []
 
         model = self.model
-        model.update(data)
+        loss = model.update(data)
+
+        if loss is not None:
+            for i in range(500):
+                loss += model.update(data)
+
+        if loss is not None:
+            print(loss/500)
+
         colors = [clr.cnames['lightcoral' if model.predict(x, y) else 'lightgreen'] for y in tick for x in tick]
         patches.set_color(colors)
 
