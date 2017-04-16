@@ -11,15 +11,14 @@ class Softmax(Binary):
         assert len(a.shape) == len(b.shape) == 1
 
     def eval_op(self, log_prob, correct):
-        assert np.max(correct) == 1 and np.min(correct) == 0 and np.sum(correct) == 1
         log_prob -= np.max(log_prob)
         norm_prob = np.exp(log_prob)
         return -np.log(norm_prob / np.sum(norm_prob))
 
     def eval_grad(self, log_prob, correct):
+        assert np.min(correct), np.max(correct) == (0, 1) and np.sum(correct) == 1
         log_prob -= np.max(log_prob)
         norm_prob = np.exp(log_prob)
         norm_prob /= np.sum(norm_prob)
         return norm_prob - correct
-
 
