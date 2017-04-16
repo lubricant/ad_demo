@@ -7,10 +7,22 @@
 import numpy as np
 import autodiff as ad
 
+from .nn_trainer import SGDTrainer
 
-class NeuralNetwork(object):
 
-    def __init__(self, layer_num=3):
+class BinaryClassifierModel(object):
+
+    def update(self, batch):
+        print(batch)
+        return 0
+
+    def predict(self, x, y):
+        return 1 if x == y else 0
+
+
+class NeuralNetwork(BinaryClassifierModel):
+
+    def __init__(self, layer_num=3, **args):
 
         assert layer_num >= 2
 
@@ -38,6 +50,8 @@ class NeuralNetwork(object):
         print(self.output)
         print(self.loss)
 
+        self.trainer = SGDTrainer(self, **args)
+
     def __repr__(self):
         return str(self.output)
 
@@ -49,30 +63,8 @@ class NeuralNetwork(object):
     def update(self, batch):
         if not batch:
             return
+        return self.trainer.update(batch)
 
-        batch_num = len(batch)
-        layer_num = len(self.weight)
-
-        loss_sum = 0
-        weight_grad_sum = [np.zeros((2,2) if i < layer_num - 1 else (2,)) for i in range(layer_num)]
-        for x, y in batch:
-            self.input.value = x
-            self.expect.value = y
-            ad.eval(self.loss)
-
-            loss_sum += self.loss.result
-            for i in range(layer_num):
-                w_grad, = self.weight[i].gradient
-                weight_grad_sum[i] += w_grad
-
-        # if self.step < 100:
-        #     self.step += 1
-
-        for i in range(layer_num):
-            weight_grad = weight_grad_sum[i] / batch_num
-            self.weight[i].value += -self.step * weight_grad
-
-        return loss_sum / batch_num
 
 if __name__ == '__main__':
     # nn = NeuralNetwork()

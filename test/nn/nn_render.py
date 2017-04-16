@@ -83,16 +83,6 @@ def init_btn():
     buttons[2].on_clicked(spiral_data)
 
 
-class BinaryClassifierModel(object):
-
-    def update(self, batch):
-        print(batch)
-        return 0
-
-    def predict(self, x, y):
-        return 1 if x == y else 0
-
-
 class ModelRender(object):
 
     fig, ax = plt.subplots()
@@ -148,11 +138,11 @@ class ModelRender(object):
         loss = model.update(data)
 
         if loss is not None:
-            for i in range(500):
+            for i in range(10):
                 loss += model.update(data)
 
         if loss is not None:
-            print(loss/500)
+            print(loss/10)
 
         colors = [clr.cnames['lightcoral' if model.predict(x, y) else 'lightgreen'] for y in tick for x in tick]
         patches.set_color(colors)
@@ -163,4 +153,5 @@ class ModelRender(object):
 
 
 if __name__ == '__main__':
+    from .nn_model import BinaryClassifierModel
     ModelRender(BinaryClassifierModel())
