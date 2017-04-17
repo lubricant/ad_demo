@@ -6,13 +6,12 @@ import numpy as np
 
 class Softmax(Binary):
 
-    correct_prob_is_idx = None
-
     def __init__(self, a, b):
-        super().__init__(a, b, code='softmax', prior=0)
         assert len(a.shape) == 1 and len(b.shape) <= 1
-        self.correct_prob_is_idx = not len(b.shape)
-        if not self.correct_prob_is_idx:
+        super().__init__(a, b, code='softmax', prior=0)
+
+        self._correct_prob_is_idx = not len(b.shape)
+        if not self._correct_prob_is_idx:
             assert np.size(a) == np.size(b)
 
     def eval_op(self, log_prob, correct_prob):
@@ -22,7 +21,7 @@ class Softmax(Binary):
         return -np.log(norm_prob / np.sum(norm_prob))
 
     def eval_grad(self, log_prob, correct_prob):
-        if self.correct_prob_is_idx:
+        if self._correct_prob_is_idx:
             # correct_prob should be a index of vector
             # which indicate the expected correct class
             assert isinstance(correct_prob, int)
@@ -37,7 +36,7 @@ class Softmax(Binary):
         norm_prob = np.exp(log_prob)
         norm_prob /= np.sum(norm_prob)
 
-        if self.correct_prob_is_idx:
+        if self._correct_prob_is_idx:
             correct_idx = correct_prob
             correct_prob = np.zeros(norm_prob.shape)
             correct_prob[correct_idx] = 1
