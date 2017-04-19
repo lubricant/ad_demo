@@ -33,31 +33,39 @@ class Binary(Node):
                 r_str = '(' + r_str + ')'
             return l_str + self.code + r_str
 
-    def forward(self):
-        left, right = self._left, self._right
-        assert left.result is not None
-        assert right.result is not None
+    def _prepare_forward(self):
+        assert self._left.result is not None
+        assert self._right.result is not None
 
         if self._left_grad is not None and self._right_grad is not None:
             self._gradient = lambda: None
             self._left_grad, self._right_grad = None, None
 
-        self._active = left.active or right.active
+        self._active = self._left.active or self._right.active
+
+    def forward(self):
+
+        self._prepare_forward()
+
+        left, right = self._left, self._right
         self._result = self.eval_op(left.result, right.result)
 
-    def backward(self, grad):
-
+    def _prepare_backward(self, grad):
         if not self.active:
             self._gradient = lambda: (None, None)
-            return
+            return False
+
+        left, right = self._left, self._right
+        assert left.result is not None
+        assert right.result is not None
 
         assert grad is not None
 
+        l_shape = left.shape
+        r_shape = right.shape
         g_shape = grad.shape if self.shape else ()
-        assert g_shape == self.shape
 
-        l_shape = self._left.shape
-        r_shape = self._right.shape
+        assert g_shape == self.shape
 
         assert len(g_shape) >= len(l_shape)
         assert len(g_shape) >= len(r_shape)
@@ -67,14 +75,19 @@ class Binary(Node):
             self._left_grad = 0 if l_shape == () else np.zeros(l_shape)
             self._right_grad = 0 if r_shape == () else np.zeros(r_shape)
 
+        return True
+
+    def backward(self, grad):
+
+        if not self._prepare_backward(grad):
+            return
+
         left, right = self._left, self._right
-        assert left.result is not None
-        assert right.result is not None
         l_grad, r_grad = self.eval_grad(left.result, right.result)
 
         l_grad, r_grad = l_grad * grad, r_grad * grad
-        l_grad = reduce_grad_shape(l_grad, l_shape)
-        r_grad = reduce_grad_shape(r_grad, r_shape)
+        l_grad = reduce_grad_shape(l_grad, left.shape)
+        r_grad = reduce_grad_shape(r_grad, right.shape)
 
         self._left_grad += l_grad
         self._right_grad += r_grad

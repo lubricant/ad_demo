@@ -25,30 +25,34 @@ class Unitary(Node):
     def __repr__(self):
         return self.code + '(' + str(self._operand) + ')'
 
-    def forward(self):
-        op_result = self._operand.result
-        assert op_result is not None
+    def _prepare_forward(self):
+        assert self._operand.result is not None
 
         if self._op_grad is not None:
             self._gradient = lambda: None
             self._op_grad = None
 
         self._active = self._operand.active
+
+    def forward(self):
+
+        self._prepare_forward()
+
+        op_result = self._operand.result
         self._result = self.eval_op(op_result)
 
-    def backward(self, grad):
+    def _prepare_backward(self, grad):
 
         if not self.active:
             self._gradient = lambda: (None,)
-            return
+            return False
 
         assert grad is not None
 
-        g_shape = grad.shape if self.shape else ()
-        assert g_shape == self.shape
-
         op_shape = self._operand.shape
+        g_shape = grad.shape if self.shape else ()
         assert len(g_shape) == len(op_shape)
+        assert g_shape == self.shape
 
         op_result = self._operand.result
         assert op_result is not None
@@ -56,6 +60,12 @@ class Unitary(Node):
         if not self._op_grad:
             self._gradient = lambda: (self._op_grad,)
             self._op_grad = np.zeros(op_shape) if op_shape else 0
+
+        return True
+
+    def backward(self, grad):
+
+        self._prepare_backward(grad)
 
         op_result = self._operand.result
         self._op_grad += grad * self.eval_grad(op_result)
