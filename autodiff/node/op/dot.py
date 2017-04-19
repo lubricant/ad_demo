@@ -16,30 +16,14 @@ class MatMul(Binary):
 
     def backward(self, grad):
 
-        if not self.active:
-            self._gradient = lambda: (None, None)
+        if not self._prepare_backward(grad):
             return
 
-        assert grad is not None
-
-        g_shape = grad.shape if self.shape else ()
-        assert g_shape == self.shape
-
-        l_shape = self._left.shape
-        r_shape = self._right.shape
-
-        if self._left_grad is None and self._right_grad is None:
-            self._gradient = lambda: (self._left_grad, self._right_grad)
-            self._left_grad = 0 if l_shape == () else np.zeros(l_shape)
-            self._right_grad = 0 if r_shape == () else np.zeros(r_shape)
-
         left, right = self._left, self._right
-        assert left.result is not None
-        assert right.result is not None
         l_grad, r_grad = self.eval_mat_grad(grad, left.result, right.result)
 
-        assert l_grad.shape == l_shape
-        assert r_grad.shape == r_shape
+        assert l_grad.shape == left.shape
+        assert r_grad.shape == right.shape
 
         self._left_grad += l_grad
         self._right_grad += r_grad

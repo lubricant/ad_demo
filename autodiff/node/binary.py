@@ -67,9 +67,6 @@ class Binary(Node):
 
         assert g_shape == self.shape
 
-        assert len(g_shape) >= len(l_shape)
-        assert len(g_shape) >= len(r_shape)
-
         if self._left_grad is None and self._right_grad is None:
             self._gradient = lambda: (self._left_grad, self._right_grad)
             self._left_grad = 0 if l_shape == () else np.zeros(l_shape)
@@ -82,7 +79,11 @@ class Binary(Node):
         if not self._prepare_backward(grad):
             return
 
+        g_shape = grad.shape if self.shape else ()
         left, right = self._left, self._right
+        assert len(g_shape) >= len(left.shape)
+        assert len(g_shape) >= len(right.shape)
+
         l_grad, r_grad = self.eval_grad(left.result, right.result)
 
         l_grad, r_grad = l_grad * grad, r_grad * grad

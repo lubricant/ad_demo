@@ -51,7 +51,6 @@ class Unitary(Node):
 
         op_shape = self._operand.shape
         g_shape = grad.shape if self.shape else ()
-        assert len(g_shape) == len(op_shape)
         assert g_shape == self.shape
 
         op_result = self._operand.result
@@ -66,6 +65,10 @@ class Unitary(Node):
     def backward(self, grad):
 
         self._prepare_backward(grad)
+
+        op_shape = self._operand.shape
+        g_shape = grad.shape if self.shape else ()
+        assert len(g_shape) == len(op_shape)
 
         op_result = self._operand.result
         self._op_grad += grad * self.eval_grad(op_result)

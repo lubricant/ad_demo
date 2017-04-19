@@ -91,8 +91,7 @@ class Slice(Unitary):
 
     def backward(self, grad):
 
-        if not self.active:
-            self._gradient = lambda: (None,)
+        if not self._prepare_backward(grad):
             return
 
         assert grad is not None
@@ -101,11 +100,5 @@ class Slice(Unitary):
 
         op_shape = self.shape
         assert len(g_shape) == len(op_shape)
-
-        if not self._op_grad:
-            g_shape = self._operand.shape
-            self._gradient = lambda: (self._op_grad,)
-            self._op_grad = np.zeros(g_shape)
-
         self._op_grad[self.__index] += grad
 
