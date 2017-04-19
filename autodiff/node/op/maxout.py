@@ -25,16 +25,16 @@ class Maxout(Unitary):
         max_out = np.zeros(self.shape)
         grp_size = self._grp_size
 
-        in_depth, _, _ = operand.shpae
+        in_depth, _, _ = operand.shape
         out_depth, _, _ = self.shape
 
-        max_idx = np.zeros(self.shape)
+        max_idx = np.zeros(self.shape, dtype=np.dtype(int))
         for i in range(out_depth):
             beg = i * grp_size
             end = np.minimum(in_depth, beg + grp_size)
             stack = operand[beg:end]
             max_out[i] = stack.max(axis=0)
-            max_idx[i] = stack.argmax(axis=0)
+            max_idx[i] = stack.argmax(axis=0) + beg
 
         self._max_idx = max_idx
         return max_out
@@ -64,5 +64,5 @@ class Maxout(Unitary):
         _, row, col = max_idx.shape
         for i in range(row):
             for j in range(col):
-                op_grad[max_idx[:, i, j]] += grad[:, i, j]
+                op_grad[max_idx[:, i, j], i, j] += grad[:, i, j]
 

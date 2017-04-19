@@ -41,5 +41,6 @@ class Softmax(Binary):
             correct_prob = np.zeros(norm_prob.shape)
             correct_prob[correct_idx] = 1
 
+        # the error between the norm_prob and correct_prob is the gradient of softmax
         return norm_prob - correct_prob, 0.  # correct_prob is ignored in backward propagation
 
