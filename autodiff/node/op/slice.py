@@ -1,7 +1,9 @@
 
 import numpy as np
 
+from autodiff.node.node import Node
 from autodiff.node.unitary import Unitary
+from autodiff.node.binary import Binary
 
 
 class Slice(Unitary):
@@ -95,10 +97,51 @@ class Slice(Unitary):
             return
 
         assert grad is not None
-        g_shape = grad.shape if self.shape else ()
-        assert g_shape == self.shape
 
-        op_shape = self.shape
-        assert len(g_shape) == len(op_shape)
+        g_shape = grad.shape if self.shape else ()
+        assert len(g_shape) == len(self.shape)
+
         self._op_grad[self.__index] += grad
+
+
+class SliceX(Binary):
+
+    def __init__(self, array, index):
+
+        # 只支持整数索引
+        assert isinstance(index, Node) and index.shape == ()
+
+        def guess_shape(a, b):
+            arr_shape = array.shape
+            assert len(arr_shape) > 0
+            is_vec = len(arr_shape) is 2 and min(arr_shape) is 1
+            return () if is_vec else arr_shape[1:]
+
+        super().__init__(array, index, code='[' + str(index) + ']', prior=1, guess_func=guess_shape)
+
+    def __repr__(self):
+        arr_name = str(self._left)
+        if self._left.prior > self.prior:
+            arr_name = '(' + arr_name + ')'
+        return arr_name + self.code
+
+    def eval_op(self, left, right):
+        return left[right]
+
+    def backward(self, grad):
+
+        if not self._prepare_backward(grad):
+            return
+
+        assert grad is not None
+
+        g_shape = grad.shape if self.shape else ()
+        assert len(g_shape) == len(self.shape)
+
+        index = self._right.result
+        assert isinstance(index, int)
+        assert 0 <= index < self._left.shape[0]
+
+        self._left_grad[index] += grad
+        # ignore right side grad
 

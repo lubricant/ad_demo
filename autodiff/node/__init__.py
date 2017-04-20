@@ -11,12 +11,12 @@ from .op.comp import Max, Min
 from .op.dot import MatMul
 from .op.plus import Plus, Minus, Neg
 from .op.pow import Pow, Exp, Log
-from .op.slice import Slice
+from .op.slice import Slice, SliceX
 from .op.times import Times, Divide
 from .op.trigon import Sin, Cos
 from .op.hype import Tanh
 
 from .op.maxout import Maxout
 from .op.active import Sigmoid, ReLu
-from .op.softmax import Softmax
+from .op.softmax import Softmax, SoftmaxLoss
 

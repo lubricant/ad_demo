@@ -63,9 +63,14 @@ class Node(object):
         assert index is not None
         assert (isinstance(index, int) or
                 isinstance(index, slice) or
-                isinstance(index, tuple))
-        from . import Slice
-        return Slice(self, index)
+                isinstance(index, tuple) or
+                isinstance(index, Node))
+        if isinstance(index, Node):
+            from . import SliceX
+            return SliceX(self, index)
+        else:
+            from . import Slice
+            return Slice(self, index)
 
     def __neg__(self):
         from . import Neg

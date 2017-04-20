@@ -55,9 +55,9 @@ def sigmoid(x):
     return node.Sigmoid(x)
 
 
-def softmax(x, y):
-    x, y = __ensure_node((x, y))
-    return node.Softmax(x, y)
+def softmax(x):
+    x = __ensure_node(x)
+    return node.Softmax(x)
 
 
 def maxout(x, i):

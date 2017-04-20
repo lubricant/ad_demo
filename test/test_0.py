@@ -29,23 +29,37 @@ print(c)
 print(c.result)
 print(a.gradient, b.gradient)
 
-
 print('--------------------------------')
-x = ad.var('x', np.array(np.arange(5)))
+x = ad.var('x', np.array(np.arange(5)[::-1]))
 y = ad.const(())
-f = ad.softmax(x, y)
+f = x[y]
 print(f)
 y.value = 1
 ad.eval(f)
-print(np.exp(-f.result).sum())
 print(f.result)
 print(f.gradient)
 
-y.value = 3
+
+print('--------------------------------')
+x = ad.var('x', np.array([1, 2, 3]))
+y = ad.const(())
+p = ad.softmax(x)
+f = p[y]
+print(f)
+y.value = 1
 ad.eval(f)
+print(p.result)
+print(p.result.sum())
 print(f.result)
 print(f.gradient)
+print(x.gradient)
 
+print('--------------------------------')
+loss = y - ad.log(p)[y]
+print(loss)
+y.value = 1
+ad.eval(f)
+print(p.gradient)
 
 print('--------------------------------')
 x = ad.var('x',np.array(np.arange(36).reshape((4,3,3))))

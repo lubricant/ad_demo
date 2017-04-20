@@ -42,10 +42,12 @@ class NeuralNetwork(BinaryClassifierModel):
 
         w = ad.var('W_%d' % layer_num, np.random.normal(0., 0.0001, (2,)))
         self.weight.append(w)
-        self.output = ad.sigmoid(x@w)
+        # self.output = ad.sigmoid(x@w)
+        self.output = ad.softmax(x@w)
 
         self.expect = ad.const(())
-        self.loss = (self.output - self.expect) ** ad.const(2)
+        # self.loss = (self.output - self.expect) ** ad.const(2)
+        self.loss = self.output[self.expect]
 
         print(self.output)
         print(self.loss)
