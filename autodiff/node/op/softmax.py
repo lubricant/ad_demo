@@ -13,10 +13,6 @@ class Softmax(Unitary):
         super().__init__(log_prob, 'softmax')
         # log_prob should be 1-D array
 
-    # def __getitem__(self, correct):
-    #     assert isinstance(correct, Node)
-    #     return SoftmaxLoss(self, correct)
-
     def eval_op(self, log_prob):
         log_prob -= np.max(log_prob)
         norm_prob = np.exp(log_prob)

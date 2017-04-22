@@ -7,17 +7,7 @@
 import numpy as np
 import autodiff as ad
 
-from .nn_trainer import SGDTrainer
-
-
-class BinaryClassifierModel(object):
-
-    def update(self, batch):
-        print(batch)
-        return 0
-
-    def predict(self, x, y):
-        return 1 if x == y else 0
+from neunet import BinaryClassifierModel
 
 
 class NeuralNetwork(BinaryClassifierModel):
@@ -53,21 +43,16 @@ class NeuralNetwork(BinaryClassifierModel):
         print(self.output)
         print(self.loss)
 
-        self.trainer = SGDTrainer(self, **args)
-
     def __repr__(self):
-        return str(self.output)
+        s = 'output: ' + str(self.output) + '\n'
+        s += 'loss: ' + str(self.loss)
+        return s
 
     def predict(self, x, y):
         self.input.value = np.array([x, y])
         ad.eval(self.output, False)
         # return self.output.result > 0.5
         return np.argmax(self.output.result)
-
-    def update(self, batch):
-        if not batch:
-            return
-        return self.trainer.update(batch)
 
 
 if __name__ == '__main__':

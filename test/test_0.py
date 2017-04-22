@@ -51,14 +51,21 @@ ad.eval(f)
 print(p.result)
 print(p.result.sum())
 print(f.result)
+
 print(f.gradient)
 print(x.gradient)
 
-print('--------------------------------')
-loss = y - ad.log(p)[y]
+print('------------1111111111-------------')
+loss = - ad.log(p[y])
 print(loss)
 y.value = 1
-ad.eval(f)
+ad.eval(loss)
+print(p.gradient)
+
+loss = - ad.log(p)[y]
+print(loss)
+y.value = 1
+ad.eval(loss)
 print(p.gradient)
 
 print('--------------------------------')
