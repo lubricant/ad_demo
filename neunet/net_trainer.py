@@ -7,7 +7,9 @@ from neunet import NeuralNetwork
 
 class SGDTrainer(object):
 
-    def __init__(self, net, step=0.01, momentum=0, l1_decay=0, l2_decay=0):
+    def __init__(self, net,
+                 batch_size, epoch_num,
+                 step=0.01, momentum=0, l1_decay=0, l2_decay=0):
 
         assert isinstance(net, NeuralNetwork)
         self.net = net

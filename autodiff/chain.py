@@ -26,12 +26,12 @@ class Chain(object):
 
         self._node_set = sorted(node_set, key=lambda node: node.depth)
 
-    def propagate(self, eval_grad=True):
+    def propagate(self, back_prop=True):
 
         for node in self._node_set:
             node.forward()
 
-        if not eval_grad:
+        if not back_prop:
             return
 
         for node in self._node_set[::-1]:

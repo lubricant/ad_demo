@@ -65,9 +65,9 @@ def maxout(x, i):
     return node.Maxout(x, i)
 
 
-def eval(x, eval_grad=True):
+def eval(x, need_grad=True):
     from .chain import Chain
-    Chain(x).propagate(eval_grad)
+    Chain(x).propagate(need_grad)
 
 
 def __ensure_node(value):

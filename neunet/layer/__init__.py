@@ -1,5 +1,8 @@
 
 
+from .base import InputLayer
+from .base import HiddenLayer
 from .base import OutputLayer
 
-from neunet.layer.fc import FullyConnLayer
+from .fc import FullyConnLayer
+
