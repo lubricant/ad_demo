@@ -10,9 +10,9 @@ def var(name, val):
     return node.Variable(name, val)
 
 
-def const(val):
+def const(val, name=None):
     val = __ensure_not_list(val)
-    return node.Const(val)
+    return node.Const(val, name)
 
 
 def sin(x):
@@ -66,8 +66,8 @@ def maxout(x, i):
 
 
 def eval(x, eval_grad=True):
-    from .tree import Tree
-    Tree(x).exec(eval_grad)
+    from .chain import Chain
+    Chain(x).propagate(eval_grad)
 
 
 def __ensure_node(value):

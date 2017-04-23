@@ -4,7 +4,7 @@ from .node import Node
 import numpy as np
 
 
-class Tree(object):
+class Chain(object):
 
     _root = None
     _node_set = None
@@ -26,7 +26,7 @@ class Tree(object):
 
         self._node_set = sorted(node_set, key=lambda node: node.depth)
 
-    def exec(self, eval_grad=True):
+    def propagate(self, eval_grad=True):
 
         for node in self._node_set:
             node.forward()

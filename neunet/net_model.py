@@ -7,6 +7,8 @@
 import numpy as np
 import autodiff as ad
 
+
+from autodiff.node import Node
 from neunet import BinaryClassifierModel
 
 
@@ -55,12 +57,7 @@ class NeuralNetwork(BinaryClassifierModel):
         return np.argmax(self.output.result)
 
 
-if __name__ == '__main__':
-    # nn = NeuralNetwork()
-    # print(nn)
-    # print(nn.output.result)
-    # nn.predict(0,0)
-    # print(nn.output.result)
 
-    def check_grad(f, x, eps):
-        return (f(x+eps) - f(x-eps))/2/eps
+
+
+
