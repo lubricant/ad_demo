@@ -55,14 +55,19 @@ def sigmoid(x):
     return node.Sigmoid(x)
 
 
-def softmax(x):
+def relu(x):
     x = __ensure_node(x)
-    return node.Softmax(x)
+    return node.ReLu(x)
 
 
 def maxout(x, i):
     x = __ensure_node(x)
     return node.Maxout(x, i)
+
+
+def softmax(x):
+    x = __ensure_node(x)
+    return node.Softmax(x)
 
 
 def eval(x, need_grad=True):

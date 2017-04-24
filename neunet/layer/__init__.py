@@ -4,5 +4,5 @@ from .base import InputLayer
 from .base import HiddenLayer
 from .base import OutputLayer
 
-from .fc import FullyConnLayer
+from .layer_fc import FullyConnLayer
 
