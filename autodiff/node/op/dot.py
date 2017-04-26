@@ -207,7 +207,7 @@ class MatMul(Binary):
                 assert g_shape[-1] == r_shape[-1]
                 grad = grad.reshape(g_shape[:-1] + (1, g_shape[-1]))
                 l_grad = reduce_grad_shape(np.sum(right * grad, axis=-1), l_shape)
-                r_grad = left.reshape(l_shape + (1,)) @ grad
+                r_grad = np.outer(left, grad)  # left.reshape(l_shape + (1,)) @ grad
                 return l_grad, r_grad
 
             # 情形 b

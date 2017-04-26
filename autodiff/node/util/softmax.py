@@ -19,9 +19,8 @@ class Softmax(Unitary):
         return norm_prob / np.sum(norm_prob)
 
     def eval_grad(self, norm_prob):
-        prob_mat = norm_prob.reshape(norm_prob.shape + (1,))
         prob_eye = np.diag(norm_prob)
-        return prob_eye - prob_mat @ prob_mat.T
+        return prob_eye - np.outer(norm_prob, norm_prob)
 
     def backward(self, grad, softmax_loss=False):
 
@@ -126,3 +125,6 @@ if __name__ == "__main__":
     grad_loss_[np.argmax(correct_)] = -1.0 / norm_prob_[np.argmax(correct_)]
     grad_two = grad_norm_ @ grad_loss_
     print(grad_two)
+
+    print(np.outer(norm_prob_, norm_prob_))
+    print(prob_mat_ @ prob_mat_.T)
