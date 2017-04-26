@@ -16,7 +16,7 @@ from .op.times import Times, Divide
 from .op.trigon import Sin, Cos
 from .op.hype import Tanh
 
-from .op.maxout import Maxout
-from .op.active import Sigmoid, ReLu
-from .op.softmax import Softmax, SoftmaxLoss
+from .util.active import Sigmoid, ReLu
+from .util.softmax import Softmax, SoftmaxLoss
+from .util.maxout import Maxout
 
