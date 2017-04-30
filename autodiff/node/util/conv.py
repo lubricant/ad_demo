@@ -71,7 +71,59 @@ class Convolute(Binary):
         self.padding = padding
 
         super().__init__(signals, filters, code='conv%dd' % kernel_dim, prior=0,
-                         guess_func=lambda a, b: guess_conv_op_result_shape(sig_shape, flt_shape, stride, padding))
+                         guess_func=lambda foo, bar: guess_conv_op_result_shape(sig_shape, flt_shape, stride, padding))
+
+    def calc_conv(self):
+        signals, filters = self._left, self._right
+        sig_shape, flt_shape = signals.shape, filters.shape
+        k_shape = flt_shape[-(len(flt_shape) - 2):]
+
+        batch_size, in_channel = sig_shape[:2]
+        out_channel = flt_shape[0]
+
+        k_size = 0  # 一个 kernel 的大小
+        for k in k_shape:
+            k_size *= k
+
+        # 输入图像的
+        in_size = k_size * in_channel
+
+
+def slice_signal(sig_input, flt_kernel, stride, padding):
+
+    kernel_shape, kernel_dim = flt_kernel.shape, len(flt_kernel.shape)
+    assert 1 <= kernel_dim <= 3
+
+    input_shape, input_dim = sig_input.shape, len(sig_input.shape)
+    assert kernel_dim == input_dim == len(stride) == len(padding)
+
+    k_width, k_height, k_depth = kernel_shape + (1,) * (3-kernel_dim)
+    i_width, i_height, i_depth = input_shape + (1,) * (3-kernel_dim)
+    p_width, p_height, p_depth = padding + (1,) * (3-kernel_dim)
+    s_width, s_height, s_depth = stride + (1,) * (3-kernel_dim)
+
+    assert not k_width % 2 and not k_height % 2 and not k_depth % 2
+    kw_radius, kh_radius, kd_radius = k_width//2, k_height//2, k_depth//2
+
+    o_width = (i_width + 2 * p_width - k_width) / s_width + 1
+    o_height = (i_height + 2 * p_height - k_height) / s_height + 1
+    o_depth = (i_depth + 2 * p_depth - k_depth) / s_depth + 1
+
+    flat_kernel = flt_kernel.flatten()
+    flat_input = np.zeros(k_width * k_height * k_depth)
+
+    if kernel_dim == 1:
+        output_buf = np.zeros(o_width)
+        for w in range(o_width):
+            iw_beg, iw_end = w - kw_radius, w + kw_radius
+            if iw_beg < 0 or iw_end > i_width:
+                flat_input[:] = 0
+
+    if kernel_dim == 2:
+        pass
+
+    if kernel_dim == 3:
+        pass
 
 
 def guess_conv_op_result_shape(signal_shape, filter_shape, stride, padding):
@@ -118,22 +170,9 @@ def guess_conv_op_result_shape(signal_shape, filter_shape, stride, padding):
     return tuple(output_shape)
 
 if __name__ == '__main__':
-    pass
-    # N, F = 7, 3
-    # S = 1
-    # O = (N-F)/S + 1
-    # print(O, (N-F)%S)
-    # stride = 2
-    # O = (N-F)/stride + 1
-    # print(O, (N-F)%S)
-    # stride = 3
-    # O = (N-F)/stride + 1
-    # print(O, (N-F)%S)
-    #
-    # # if same
-    # P = (F-1)/2
-    #
-    # H, W = 7, 5
-    # HF, WF = 1, 1
-    #
-    # print()
+    a = np.arange(9).reshape((3, 3))
+    b = a.flatten()
+    print(a)
+    b[2] = -1
+    print(a)
+
