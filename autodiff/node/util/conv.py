@@ -165,10 +165,6 @@ def im2col(sig_input, kernel_shape, stride, padding):
     p_width, p_height, p_depth = padding + (0,) * (3-kernel_dim)
     s_width, s_height, s_depth = stride + (1,) * (3-kernel_dim)
 
-    # print(input_shape, kernel_shape, padding, stride)
-    # print(k_width, k_height, k_depth)
-    # print(i_width, i_height, i_depth)
-
     assert k_width % 2 and k_height % 2 and k_depth % 2
     kw_radius, kh_radius, kd_radius = k_width//2, k_height//2, k_depth//2
 
@@ -182,92 +178,123 @@ def im2col(sig_input, kernel_shape, stride, padding):
     #
     # print(o_width, o_height, o_depth)
 
-    def img2col_1d(w_sig_input, w_sig_buf, is_clipped=False):
+    def img2col_1d(w_sig_input, w_sig_buf):
+
+        w_sig_shape = w_sig_input.shape
+        higher_dim = len(w_sig_shape) - 2
+
         for w in range(w_start, w_stop, s_width):
             # w_size = k_width * channel
             w_beg, w_end = w - kw_radius, w + kw_radius + 1
             if 0 <= w_beg and w_end <= i_width:
-                if not is_clipped:
+                if not higher_dim:
                     w_sig_buf[:] = w_sig_input[w_beg: w_end].ravel()
-                else:
+                elif higher_dim == 1:
                     w_sig_buf[:] = w_sig_input[:, w_beg: w_end].ravel()
+                elif higher_dim == 2:
+                    w_sig_buf[:] = w_sig_input[:, :, w_beg: w_end].ravel()
             else:
                 assert not (w_beg < 0 and w_end > i_width)
-                if not is_clipped:
-                    if w_beg < 0:
-                        w_pad = -w_beg
-                        w_sig_buf[:w_pad] = 0
-                        w_sig_buf[w_pad:] = w_sig_input[:w_end].ravel()
-                    else:
-                        w_pad = w_end - i_width
-                        w_sig_buf[-w_pad:] = 0
-                        w_sig_buf[:-w_pad] = w_sig_input[w_beg:].ravel()
-                else:
-                    w_sig_buf[:] = 0
-                    line_size = k_width * channel
-                    if w_beg < 0:
-                        pad_size = -w_beg * channel
-                        for i in range(w_sig_input.shape[0]):
+
+                w_sig_buf[:] = 0
+                line_size = k_width * channel
+
+                if w_beg < 0:
+                    pad_size = -w_beg * channel
+                    if not higher_dim:
+                        w_sig_buf[pad_size:] = w_sig_input[:w_end].ravel()
+
+                    elif higher_dim == 1:
+                        for i in range(w_sig_shape[0]):
                             offset = i * line_size
                             w_sig_buf[offset + pad_size: offset + line_size - pad_size + 1] = w_sig_input[i, :w_end].ravel()
-                    else:
-                        pad_size = (w_end - i_width) * channel
+
+                    elif higher_dim == 2:
+                        for j in range(w_sig_shape[0]):
+                            for i in range(w_sig_shape[1]):
+                                offset = i * line_size
+                                w_sig_buf[offset + pad_size: offset + line_size - pad_size + 1] = w_sig_input[j, i, :w_end].ravel()
+                else:
+                    pad_size = (w_end - i_width) * channel
+                    if not higher_dim:
+                        w_sig_buf[:-pad_size] = w_sig_input[w_beg:].ravel()
+                    elif higher_dim == 1:
                         for i in range(w_sig_input.shape[0]):
                             offset = i * line_size
                             w_sig_buf[offset + pad_size: offset + line_size] = w_sig_input[i, w_beg:].ravel()
+                    elif higher_dim == 2:
+                        for j in range(w_sig_input.shape[0]):
+                            for i in range(w_sig_input[j].shape[0]):
+                                offset = i * line_size
+                                w_sig_buf[offset + pad_size: offset + line_size] = w_sig_input[j, i, w_beg:].ravel()
 
             yield w_sig_buf
 
     def img2col_2d(h_sig_input, h_sig_buf):
+
+        higher_dim = len(h_sig_input.shape) - 3
+
         for h in range(h_start, h_stop, s_height):
             h_beg, h_end = h - kh_radius, h + kh_radius + 1
-            clip_sig_input, clip_sig_buf = None, None
+
             if 0 <= h_beg and h_end <= i_height:
-                clip_sig_input = h_sig_input[h_beg: h_end]
+                if not higher_dim:
+                    clip_sig_input = h_sig_input[h_beg: h_end]
+                else:
+                    clip_sig_input = h_sig_input[:, h_beg: h_end]
+
                 clip_sig_buf = h_sig_buf
             else:
                 assert not (h_beg < 0 and h_end > i_height)
-                if h_beg < 0:
-                    h_pad = -h_beg
-                    h_skip = h_pad * k_width * channel
-                    h_sig_buf[:h_skip] = 0
-                    clip_sig_input = h_sig_input[:h_end]
-                    clip_sig_buf = h_sig_buf[h_skip:]
+                if not higher_dim:
+                    if h_beg < 0:
+                        h_skip = -h_beg * k_width * channel
+                        clip_sig_input = h_sig_input[:h_end]
+                        h_sig_buf[:h_skip] = 0
+                        clip_sig_buf = h_sig_buf[h_skip:]
+                    else:
+                        h_skip = (h_end - i_height) * k_width * channel
+                        clip_sig_input = h_sig_input[h_beg:]
+                        h_sig_buf[-h_skip:] = 0
+                        clip_sig_buf = h_sig_buf[:-h_skip]
                 else:
-                    h_pad = h_end - i_height
-                    h_skip = h_pad * k_width * channel
-                    h_sig_buf[-h_skip:] = 0
-                    clip_sig_input = h_sig_input[h_beg:]
-                    clip_sig_buf = h_sig_buf[:-h_skip]
+                    if h_beg < 0:
+                        h_skip = -h_beg * k_height * k_width * channel
+                        clip_sig_input = h_sig_input[:, :h_end]
+                        h_sig_buf[:h_skip] = 0
+                        clip_sig_buf = h_sig_buf[h_skip:]
+                    else:
+                        h_skip = (h_end - i_height) * k_height * k_width * channel
+                        clip_sig_input = h_sig_input[:, h_beg:]
+                        h_sig_buf[-h_skip:] = 0
+                        clip_sig_buf = h_sig_buf[:-h_skip]
 
-            print('++++++++++++++++++++++++++++++++++++++')
-            print(clip_sig_input.shape, clip_sig_buf.shape)
-            for x in img2col_1d(clip_sig_input, clip_sig_buf, is_clipped=True):
+            # print('+++++++++++++++++++++++++++++++++++++')
+            # print(h_skip, clip_sig_input.shape, clip_sig_buf.shape)
+            for _ in img2col_1d(clip_sig_input, clip_sig_buf):
                 yield h_sig_buf
 
     def img2col_3d(d_sig_input, d_sig_buf):
         for d in range(d_start, d_stop, s_depth):
             d_beg, d_end = d - kd_radius, d + kd_radius + 1
-            clip_sig_input, clip_sig_buf = None, None
+
             if 0 <= d_beg and d_end <= i_height:
                 clip_sig_input = d_sig_input[d_beg: d_end]
                 clip_sig_buf = d_sig_buf
             else:
                 assert not (d_beg < 0 and d_end > i_depth)
                 if d_beg < 0:
-                    d_pad = -d_beg
-                    d_skip = d_pad * k_height * k_width * channel
-                    d_sig_buf[:d_skip] = 0
+                    d_skip = -d_beg * k_height * k_width * channel
                     clip_sig_input = d_sig_input[:d_end]
+                    d_sig_buf[:d_skip] = 0
                     clip_sig_buf = d_sig_buf[d_skip:]
                 else:
-                    d_pad = d_end - i_depth
-                    d_skip = d_pad * k_height * k_width * channel
-                    d_sig_buf[-d_skip:] = 0
+                    d_skip = (d_end - i_depth) * k_height * k_width * channel
                     clip_sig_input = d_sig_input[d_beg:]
+                    d_sig_buf[-d_skip:] = 0
                     clip_sig_buf = d_sig_buf[:-d_skip]
 
-            for x in img2col_2d(clip_sig_input, clip_sig_buf):
+            for _ in img2col_2d(clip_sig_input, clip_sig_buf):
                 yield d_sig_buf
 
     kernel_size = k_width * k_height * k_depth
@@ -284,31 +311,31 @@ def im2col(sig_input, kernel_shape, stride, padding):
 
 
 if __name__ == '__main__':
-    # is_same = False
+    # is_same = True
     # in_ch = 1
-    # sig_in = (np.arange(7) + 1).reshape((7, in_ch))
+    # sig_in = (np.arange(7*in_ch) + 1).reshape((7, in_ch))
     # ken_sh = (3,)
     # print(sig_in)
     # print(ken_sh)
     # for buf in im2col(sig_in, ken_sh, (1,), (1,) if is_same else (0,)):
     #     print(buf.reshape((3, in_ch)))
 
-    # is_same = True
-    # in_ch = 1
-    # sig_in = (np.arange(25*in_ch) + 1).reshape((5, 5, in_ch))
-    # ken_sh = (3,3)
-    # print(sig_in)
-    # print(ken_sh)
-    # for buf in im2col(sig_in, ken_sh, (1,1), (1,1) if is_same else (0,0)):
-    #     print('---------------------')
-    #     print(buf.reshape((3,3, in_ch)))
-
-    is_same = False
-    in_ch = 1
-    sig_in = (np.arange(125*in_ch) + 1).reshape((5, 5, 5, in_ch))
-    ken_sh = (3,3,3)
+    is_same = True
+    in_ch = 2
+    sig_in = (np.arange(25*in_ch) + 1).reshape((5, 5, in_ch))
+    ken_sh = (3,3)
     print(sig_in)
     print(ken_sh)
-    for buf in im2col(sig_in, ken_sh, (1,1,1), (1,1,1) if is_same else (0,0,0)):
+    for buf in im2col(sig_in, ken_sh, (1,1), (1,1) if is_same else (0,0)):
         print('---------------------')
-        print(buf.reshape((3,3,3, in_ch)))
+        print(buf.reshape((3,3, in_ch)))
+
+    # is_same = True
+    # in_ch = 1
+    # sig_in = (np.arange(125*in_ch) + 1).reshape((5, 5, 5, in_ch))
+    # ken_sh = (3,3,3)
+    # print(sig_in)
+    # print(ken_sh)
+    # for buf in im2col(sig_in, ken_sh, (1,1,1), (1,1,1) if is_same else (0,0,0)):
+    #     print('---------------------')
+    #     print(buf.reshape((3,3,3, in_ch)))
