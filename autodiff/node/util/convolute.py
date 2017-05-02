@@ -178,7 +178,7 @@ def im2col(sig_input, kernel_shape, stride, padding):
     #
     # print(o_width, o_height, o_depth)
 
-    def img2col_1d(w_sig_input, w_sig_buf, clip_idx=None):
+    def img2col_1d(w_sig_input, w_sig_buf):
 
         w_sig_shape = w_sig_input.shape
         higher_dim = len(w_sig_shape) - 2
@@ -230,23 +230,22 @@ def im2col(sig_input, kernel_shape, stride, padding):
 
             yield w_sig_buf
 
-    def img2col_2d(input_idx_3d=(), buf_idx_3d=()):
+    def img2col_2d(h_sig_input, h_sig_buf):
+
+        higher_dim = len(h_sig_input.shape) - 3
 
         for h in range(h_start, h_stop, s_height):
             h_beg, h_end = h - kh_radius, h + kh_radius + 1
 
             if 0 <= h_beg and h_end <= i_height:
-                input_idx = slice(h_beg, h_end)
-                buf_idx = slice(0, k_height)
+                if not higher_dim:
+                    clip_sig_input = h_sig_input[h_beg: h_end]
+                else:
+                    clip_sig_input = h_sig_input[:, h_beg: h_end]
+
+                clip_sig_buf = h_sig_buf
             else:
                 assert not (h_beg < 0 and h_end > i_height)
-                if h_beg < 0:
-                    input_idx = slice(start=0, stop=h_end)
-                    buf_idx = slice(0)
-                else:
-                    input_idx = slice(start=h_beg, stop=i_height)
-                    buf_idx = slice(0)
-
                 if not higher_dim:
                     if h_beg < 0:
                         h_skip = -h_beg * k_width * channel
@@ -336,12 +335,12 @@ if __name__ == '__main__':
     #     print('---------------------')
     #     print(buf.reshape((3,3, in_ch)))
 
-    # is_same = True
-    # in_ch = 1
-    # sig_in = (np.arange(125*in_ch) + 1).reshape((5, 5, 5, in_ch))
-    # ken_sh = (3,3,3)
-    # print(sig_in)
-    # print(ken_sh)
-    # for buf in im2col(sig_in, ken_sh, (1,1,1), (1,1,1) if is_same else (0,0,0)):
-    #     print('---------------------')
-    #     print(buf.reshape((3,3,3, in_ch)))
+    is_same = True
+    in_ch = 1
+    sig_in = (np.arange(125*in_ch) + 1).reshape((5, 5, 5, in_ch))
+    ken_sh = (3,3,3)
+    print(sig_in)
+    print(ken_sh)
+    for buf in im2col(sig_in, ken_sh, (1,1,1), (1,1,1) if is_same else (0,0,0)):
+        print('---------------------')
+        print(buf.reshape((3,3,3, in_ch)))
