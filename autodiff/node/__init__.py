@@ -19,4 +19,4 @@ from .op.hype import Tanh
 from .util.active import Sigmoid, ReLu
 from .util.softmax import Softmax, SoftmaxLoss
 from .util.maxout import Maxout
-from .util.conv import Convolute
+# from .util.conv import Convolute
