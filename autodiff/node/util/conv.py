@@ -130,7 +130,7 @@ def guess_conv_op_result_shape(signal_shape, filter_shape, stride, padding):
     return tuple(output_shape)
 
 
-def im2col(sig_input, kernel_shape, stride, padding):
+def slide_window(sig_input, kernel_shape, stride, padding, win_func):
     '''
     将样本数据分解为多个 kernel_shape 对应的数据窗口，方便卷积计算
         sig_input: 单个样本数据，格式为：[i_depth, i_height, i_width, in_channel]
@@ -163,24 +163,21 @@ def im2col(sig_input, kernel_shape, stride, padding):
     h_start, h_stop = 0 + kh_radius - p_height, i_height - kh_radius + p_height
     d_start, d_stop = 0 + kd_radius - p_depth, i_depth - kd_radius + p_depth
 
-    kernel_size = k_width * k_height * k_depth
-    sig_buf = flat_sig_buf = np.zeros(kernel_size * channel)
-
-    def img2col_1d(clip_input_2d=None, clip_buf_2d=None):
+    def slide_win_1d(clip_input_2d=None, clip_win_2d=None):
 
         for w in range(w_start, w_stop, s_width):
             w_beg, w_end = w - kw_radius, w + kw_radius + 1
             if 0 <= w_beg and w_end <= i_width:
                 input_idx = slice(w_beg, w_end)
-                buf_idx = slice(0, k_width)
+                win_idx = slice(0, k_width)
             else:
                 assert not (w_beg < 0 and w_end > i_width)
                 if w_beg < 0:
                     input_idx = slice(0, w_end)
-                    buf_idx = slice(-w_beg, k_width)
+                    win_idx = slice(-w_beg, k_width)
                 else:
                     input_idx = slice(w_beg, i_width)
-                    buf_idx = slice(0, i_width-w_end)
+                    win_idx = slice(0, i_width-w_end)
 
             if clip_input_2d is not None:
                 if not isinstance(clip_input_2d, tuple):
@@ -188,80 +185,94 @@ def im2col(sig_input, kernel_shape, stride, padding):
                 else:
                     input_idx = clip_input_2d + (input_idx,)
 
-            if clip_buf_2d is not None:
+            if clip_win_2d is not None:
                 if not isinstance(clip_input_2d, tuple):
-                    buf_idx = (clip_buf_2d, buf_idx)
+                    win_idx = (clip_win_2d, win_idx)
                 else:
-                    buf_idx = clip_buf_2d + (buf_idx,)
+                    win_idx = clip_win_2d + (win_idx,)
 
-            sig_buf[:] = 0
-            sig_buf[buf_idx] = sig_input[input_idx]
-            yield flat_sig_buf
+            win_func(input_idx, win_idx)
 
-    def img2col_2d(clip_input_3d=None, clip_buf_3d=None):
+    def slide_win_2d(clip_input_3d=None, clip_win_3d=None):
 
         for h in range(h_start, h_stop, s_height):
             h_beg, h_end = h - kh_radius, h + kh_radius + 1
 
             if 0 <= h_beg and h_end <= i_height:
                 clip_input = slice(h_beg, h_end)
-                clip_buf = slice(0, k_height)
+                clip_win = slice(0, k_height)
             else:
                 assert not (h_beg < 0 and h_end > i_height)
                 if h_beg < 0:
                     clip_input = slice(0, h_end)
-                    clip_buf = slice(-h_beg, k_height)
+                    clip_win = slice(-h_beg, k_height)
                 else:
                     clip_input = slice(h_beg, i_height)
-                    clip_buf = slice(0, i_height-h_end)
+                    clip_win = slice(0, i_height-h_end)
 
             if clip_input_3d is not None:
                 clip_input = (clip_input_3d, clip_input)
 
-            if clip_buf_3d is not None:
-                clip_buf = (clip_buf_3d, clip_buf)
+            if clip_win_3d is not None:
+                clip_win = (clip_win_3d, clip_win)
 
-            for _ in img2col_1d(clip_input, clip_buf):
-                yield flat_sig_buf
+            slide_win_1d(clip_input, clip_win)
 
-    def img2col_3d():
+    def slide_win_3d():
 
         for d in range(d_start, d_stop, s_depth):
             d_beg, d_end = d - kd_radius, d + kd_radius + 1
 
             if 0 <= d_beg and d_end <= i_height:
                 clip_input = slice(d_beg, d_end)
-                clip_buf = slice(0, k_depth)
+                clip_win = slice(0, k_depth)
             else:
                 assert not (d_beg < 0 and d_end > i_depth)
                 if d_beg < 0:
                     clip_input = slice(0, d_end)
-                    clip_buf = slice(-d_beg, k_depth)
+                    clip_win = slice(-d_beg, k_depth)
                 else:
                     clip_input = slice(d_beg, i_depth)
-                    clip_buf = slice(0, i_depth-d_end)
+                    clip_win = slice(0, i_depth-d_end)
 
-            for _ in img2col_2d(clip_input, clip_buf):
-                yield flat_sig_buf
+            slide_win_2d(clip_input, clip_win)
 
     if kernel_dim == 1:
-        sig_buf = sig_buf.reshape((k_width, channel))
-        return img2col_1d()
+        slide_win_1d()
 
     if kernel_dim == 2:
-        sig_buf = sig_buf.reshape((k_height, k_width, channel))
-        return img2col_2d()
+        slide_win_2d()
 
     if kernel_dim == 3:
-        sig_buf = sig_buf.reshape((k_depth, k_height, k_width, channel))
-        return img2col_3d()
+        slide_win_3d()
+
+
+def im2col(sig_input, filters, stride, padding):
+    '''
+        sig_input: 单个样本数据，格式为：[i_depth, i_height, i_width, in_channel]
+        filters: 滤波器，格式为：[k_depth, k_height, k_width, in_channel, out_channel]
+        stride: 卷积滑动步长，格式为：(s_depth, s_height, s_width)
+        padding: 输入边界填充量，格式为：(p_depth, p_height, p_width)
+    '''
+
+    sig_buf = np.zeros(kernel_shape)
+    flat_sig = sig_buf.ravel()
+
+    out_buf = np.zeros()
+    flat_out = out_buf.ravel()
+
+    def sig_win(input_idx, win_idx):
+        sig_buf[:] = 0
+        sig_buf[win_idx] = sig_input[input_idx]
+
+    slide_window(sig_input, kernel_shape[:-1], stride, padding, sig_win)
 
 
 if __name__ == '__main__':
     # is_same = False
     # in_ch = 2
     # sig_in = (np.arange(7*in_ch) + 1).reshape((7, in_ch))
-    # ken_sh = (3,)
+    # ken_sh = (3,in_ch)
     # print(sig_in)
     # print(ken_sh)
     # for buf in im2col(sig_in, ken_sh, (1,), (1,) if is_same else (0,)):
