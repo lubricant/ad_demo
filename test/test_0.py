@@ -115,3 +115,10 @@ print('--------------------------------')
 # for x in test():
 #     print(x)
 
+a = np.arange(7*3*3*2).reshape((7,3,3,2))  # batch_size, height, width, in_ch
+b = np.arange(3*3*2*6).reshape((3,3,2,6))  # , height, width, in_ch, out_ch
+
+c = np.tensordot(a, b, axes=([1,2,3],[0,1,2]))
+print(c.shape)
+
+print([ax for ax in range(1)])
