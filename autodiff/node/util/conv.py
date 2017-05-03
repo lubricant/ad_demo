@@ -130,20 +130,14 @@ def guess_conv_op_result_shape(signal_shape, filter_shape, stride, padding):
     return tuple(output_shape)
 
 
-def slide_window(sig_input, kernel_shape, stride, padding, win_func):
+def slide_window(input_shape, kernel_shape, stride, padding, win_func):
     '''
     将样本数据分解为多个 kernel_shape 对应的数据窗口，方便卷积计算
-        sig_input: 单个样本数据，格式为：[i_depth, i_height, i_width, in_channel]
+        input_shape: 单个样本数据，格式为：(i_depth, i_height, i_width)
         kernel_shape: 卷积核形状，格式为：(k_depth, k_height, k_width)
         stride: 卷积滑动步长，格式为：(s_depth, s_height, s_width)
         padding: 输入边界填充量，格式为：(p_depth, p_height, p_width)
     '''
-
-    sig_shape = sig_input.shape
-    assert len(sig_shape) >= 2
-    assert len(sig_shape) == len(kernel_shape) + 1
-
-    input_shape, channel = sig_shape[:-1], sig_shape[-1]
 
     kernel_dim = len(kernel_shape)
     assert 1 <= kernel_dim <= 3
@@ -255,17 +249,24 @@ def im2col(sig_input, filters, stride, padding):
         padding: 输入边界填充量，格式为：(p_depth, p_height, p_width)
     '''
 
-    sig_buf = np.zeros(kernel_shape)
+    sig_in_shape = sig_input.shape
+    flt_shape = filters.shape
+
+    input_shape = sig_in_shape[:-1]
+    kernel_shape = flt_shape[:-2]
+    in_ch, out_ch = flt_shape[-2], flt_shape[-1]
+
+    sig_buf = np.zeros(kernel_shape + (in_ch,))
     flat_sig = sig_buf.ravel()
 
-    out_buf = np.zeros()
+    out_buf = np.zeros(kernel_shape + (out_ch,))
     flat_out = out_buf.ravel()
 
     def sig_win(input_idx, win_idx):
         sig_buf[:] = 0
         sig_buf[win_idx] = sig_input[input_idx]
 
-    slide_window(sig_input, kernel_shape[:-1], stride, padding, sig_win)
+    slide_window(input_shape, kernel_shape, stride, padding, sig_win)
 
 
 if __name__ == '__main__':
