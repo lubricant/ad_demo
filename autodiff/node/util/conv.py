@@ -130,7 +130,7 @@ def guess_conv_op_result_shape(signal_shape, filter_shape, stride, padding):
     return tuple(output_shape)
 
 
-def slide_window(input_shape, kernel_shape, stride, padding, win_func):
+def slide_window(input_shape, kernel_shape, stride, padding):
     '''
     将样本数据分解为多个 kernel_shape 对应的数据窗口，方便卷积计算
         input_shape: 单个样本数据，格式为：(i_depth, i_height, i_width)
@@ -157,7 +157,7 @@ def slide_window(input_shape, kernel_shape, stride, padding, win_func):
     h_start, h_stop = 0 + kh_radius - p_height, i_height - kh_radius + p_height
     d_start, d_stop = 0 + kd_radius - p_depth, i_depth - kd_radius + p_depth
 
-    def slide_win_1d(clip_input_2d=None, clip_win_2d=None):
+    def slide_win_1d(clip_input_2d=None, clip_win_2d=None, height_idx=()):
 
         for w in range(w_start, w_stop, s_width):
             w_beg, w_end = w - kw_radius, w + kw_radius + 1
@@ -185,9 +185,9 @@ def slide_window(input_shape, kernel_shape, stride, padding, win_func):
                 else:
                     win_idx = clip_win_2d + (win_idx,)
 
-            win_func(input_idx, win_idx)
+            yield input_idx, win_idx, height_idx + (w,)
 
-    def slide_win_2d(clip_input_3d=None, clip_win_3d=None):
+    def slide_win_2d(clip_input_3d=None, clip_win_3d=None, depth_idx=None):
 
         for h in range(h_start, h_stop, s_height):
             h_beg, h_end = h - kh_radius, h + kh_radius + 1
@@ -210,7 +210,7 @@ def slide_window(input_shape, kernel_shape, stride, padding, win_func):
             if clip_win_3d is not None:
                 clip_win = (clip_win_3d, clip_win)
 
-            slide_win_1d(clip_input, clip_win)
+            yield clip_input, clip_win, (h,) if not depth_idx else (depth_idx, h)
 
     def slide_win_3d():
 
@@ -229,45 +229,72 @@ def slide_window(input_shape, kernel_shape, stride, padding, win_func):
                     clip_input = slice(d_beg, i_depth)
                     clip_win = slice(0, i_depth-d_end)
 
-            slide_win_2d(clip_input, clip_win)
+            yield clip_input, clip_win, d
 
     if kernel_dim == 1:
-        slide_win_1d()
+        return slide_win_1d()
 
     if kernel_dim == 2:
-        slide_win_2d()
+        for i_2d, w_2d, h in slide_win_2d():
+            for idx in slide_win_1d(i_2d, w_2d, h):
+                yield idx
 
     if kernel_dim == 3:
-        slide_win_3d()
+        for i_3d, w_3d, d in slide_win_3d():
+            for i_2d, w_2d, h in slide_win_2d(i_3d, w_3d, d):
+                for idx in slide_win_1d(i_2d, w_2d, h):
+                    yield idx
 
 
-def im2col(sig_input, filters, stride, padding):
+def im2col(signals, filters, stride, padding):
     '''
-        sig_input: 单个样本数据，格式为：[i_depth, i_height, i_width, in_channel]
+        sig_input: 单个样本数据，格式为：[batch_size, i_depth, i_height, i_width, in_channel]
         filters: 滤波器，格式为：[k_depth, k_height, k_width, in_channel, out_channel]
         stride: 卷积滑动步长，格式为：(s_depth, s_height, s_width)
         padding: 输入边界填充量，格式为：(p_depth, p_height, p_width)
     '''
 
-    sig_in_shape = sig_input.shape
+    sig_shape = signals.shape
     flt_shape = filters.shape
 
-    input_shape = sig_in_shape[:-1]
+    input_shape = sig_shape[1:-1]
     kernel_shape = flt_shape[:-2]
+
+    batch_size = sig_shape[0]
     in_ch, out_ch = flt_shape[-2], flt_shape[-1]
 
-    sig_buf = np.zeros(kernel_shape + (in_ch,))
-    flat_sig = sig_buf.ravel()
+    batch_kernel_size = (batch_size, ) + kernel_shape
+    input_buf = np.zeros(batch_kernel_size + (in_ch,))
+    input_mat = input_buf.reshape(batch_kernel_size + (1, in_ch))
 
-    out_buf = np.zeros(kernel_shape + (out_ch,))
-    flat_out = out_buf.ravel()
+    conv_buf = np.zeros(batch_kernel_size + (out_ch,))
+    conv_mat = conv_buf.reshape(batch_kernel_size + (1, out_ch))
 
-    def sig_win(input_idx, win_idx):
-        sig_buf[:] = 0
-        sig_buf[win_idx] = sig_input[input_idx]
+    output_shape = None
+    output_buf = np.zeros(output_shape)
 
-    slide_window(input_shape, kernel_shape, stride, padding, sig_win)
+    def fill_buf(i_idx, w_idx):
+        if not isinstance(w_idx, tuple):
+            win_size = w_idx.stop - w_idx.start
+        else:
+            win_size = 1
+            for w in w_idx:
+                win_size *= w.stop - w.start
 
+        if win_size < input_buf.size:
+            input_buf[:] = 0
+
+        input_buf[:, w_idx] = signals[:, i_idx]
+
+    def flush_buf(w_pos):
+        pass
+
+    for input_idx, win_idx, win_pos in slide_window(input_shape, kernel_shape, stride, padding):
+        fill_buf(input_idx, win_idx)
+        np.matmul(input_mat, filters, conv_mat)
+        flush_buf(win_pos)
+
+    return output_buf
 
 if __name__ == '__main__':
     # is_same = False

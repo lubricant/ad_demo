@@ -70,9 +70,9 @@ def softmax(x):
     return node.Softmax(x)
 
 
-def conv(a, b, **args):
-    a, b = __ensure_node((a, b))
-    return node.Convolute(a, b, **args)
+# def conv(a, b, **args):
+#     a, b = __ensure_node((a, b))
+#     return node.Convolute(a, b, **args)
 
 
 def eval(x, need_grad=True):

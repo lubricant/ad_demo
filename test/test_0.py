@@ -77,19 +77,41 @@ ad.eval(f)
 print(f.result)
 print(f.gradient)
 
-print('--------------------------------')
-a = ad.var('a', np.zeros((1, 3, 7)))
-b = ad.var('b', np.zeros((6, 3, 3)))
-c = ad.conv(a, b, padding='SAME')
-print(c, c.shape)
-c = ad.conv(a, b, padding='VALID')
-print(c, c.shape)
+# print('--------------------------------')
+# a = ad.var('a', np.zeros((1, 3, 7)))
+# b = ad.var('b', np.zeros((6, 3, 3)))
+# c = ad.conv(a, b, padding='SAME')
+# print(c, c.shape)
+# c = ad.conv(a, b, padding='VALID')
+# print(c, c.shape)
+#
+# print('--------------------------------')
+# a = ad.var('a', np.zeros((1, 3, 7, 7)))
+# b = ad.var('b', np.zeros((6, 3, 3, 3)))
+# c = ad.conv(a, b, padding=('SAME', 'SAME'))
+# print(c, c.shape)
+# c = ad.conv(a, b, padding='VALID')
+# print(c, c.shape)
 
 print('--------------------------------')
-a = ad.var('a', np.zeros((1, 3, 7, 7)))
-b = ad.var('b', np.zeros((6, 3, 3, 3)))
-c = ad.conv(a, b, padding=('SAME', 'SAME'))
-print(c, c.shape)
-c = ad.conv(a, b, padding='VALID')
-print(c, c.shape)
+
+
+# def lay_1(i2):
+#     for i in range(5):
+#         yield i2, 1
+#
+#
+# def lay_2():
+#     for i in range(5):
+#         yield i
+#
+#
+# def test():
+#     for i in lay_2():
+#         for j, k in lay_1(i):
+#             yield j, k
+#
+#
+# for x in test():
+#     print(x)
 
