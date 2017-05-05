@@ -288,6 +288,7 @@ def calc_conv(signals, filters, stride, padding):
 
     def flush_buf(w_pos):
         conv_result = np.tensordot(sig_buf, filters, (sig_axes, flt_axes))
+        assert conv_result.shape == (batch_size, out_ch)
         conv_output[:, w_pos] = conv_result
 
     for input_idx, win_idx, win_pos in slide_window(input_shape, kernel_shape, stride, padding):
@@ -300,14 +301,18 @@ def calc_conv(signals, filters, stride, padding):
 def acc_grad(conv_grad, sig_shape, flt_shape, stride, padding):
     '''
         累加梯度
-        sig_grad: 卷积结果对应，格式为：[batch_size, o_depth, o_height, o_width, in_channel]
+        sig_grad: 卷积结果对应梯度，格式为：[batch_size, o_depth, o_height, o_width, in_channel]
         flt_shape: 滤波器，格式为：[k_depth, k_height, k_width, in_channel, out_channel]
         stride: 卷积滑动步长，格式为：(s_depth, s_height, s_width)
         padding: 输入边界填充量，格式为：(p_depth, p_height, p_width)
     '''
 
-    out_shape = guess_conv_op_result_shape(sig_shape, flt_shape, stride, padding)
-    assert conv_grad.shape == out_shape
+    conv_shape = guess_conv_op_result_shape(sig_shape, flt_shape, stride, padding)
+    assert conv_grad.shape == conv_shape
+
+    conv_shape = conv_shape[1:]
+    conv_grad = np.sum(conv_grad, axis=0)
+    assert conv_grad.shape == conv_shape
 
     input_shape = sig_shape[1:-1]
     kernel_shape = flt_shape[:-2]
@@ -316,11 +321,12 @@ def acc_grad(conv_grad, sig_shape, flt_shape, stride, padding):
     in_ch, out_ch = flt_shape[-2], flt_shape[-1]
 
     batch_kernel_size = (batch_size,) + kernel_shape
-    sig_buf = np.zeros(batch_kernel_size + (in_ch,))
+    grad_buf = np.zeros(batch_kernel_size + (in_ch,))
 
     flt_grad = np.zeros(flt_shape)
 
     for input_idx, win_idx, win_pos in slide_window(input_shape, kernel_shape, stride, padding):
+        conv_grad[:, win_pos]
         pass
 
     return flt_grad
