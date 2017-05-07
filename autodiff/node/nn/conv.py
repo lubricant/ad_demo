@@ -147,103 +147,46 @@ def slide_window(input_shape, kernel_shape, stride, padding):
     i_width, i_height, i_depth = input_shape + (1,) * (3-kernel_dim)
     p_width, p_height, p_depth = padding + (0,) * (3-kernel_dim)
     s_width, s_height, s_depth = stride + (1,) * (3-kernel_dim)
-
     assert k_width % 2 and k_height % 2 and k_depth % 2
-    kw_radius, kh_radius, kd_radius = k_width//2, k_height//2, k_depth//2
 
-    def slide_win_1d(clip_input_2d=None, clip_win_2d=None, iter_2d=()):
-        w_iter = 0
-        w_start, w_stop = 0 + kw_radius - p_width, i_width - kw_radius + p_width
-        for w in range(w_start, w_stop, s_width):
-            w_beg, w_end = w - kw_radius, w + kw_radius + 1
-            if 0 <= w_beg and w_end <= i_width:
-                input_idx = slice(w_beg, w_end)
-                win_idx = slice(0, k_width)
+    def slide(
+            input_size, win_size, step, pad,
+            clip_input=(), clip_win=(), prev_iter=()):
+
+        radius = win_size // 2
+        n, start, stop = 0, 0 + radius - pad, input_size - radius + pad
+        for i in range(start, stop, step):
+            beg, end = i - radius, i + radius + 1
+
+            if 0 <= beg and end <= input_size:
+                input_idx = slice(beg, end)
+                win_idx = slice(0, win_size)
             else:
-                assert not (w_beg < 0 and w_end > i_width)
-                if w_beg < 0:
-                    input_idx = slice(0, w_end)
-                    win_idx = slice(-w_beg, k_width)
+                assert not (beg < 0 and end > input_size)
+                if beg < 0:
+                    input_idx = slice(0, end)
+                    win_idx = slice(-beg, win_size)
                 else:
-                    input_idx = slice(w_beg, i_width)
-                    win_idx = slice(0, i_width-w_end)
+                    input_idx = slice(beg, input_size)
+                    win_idx = slice(0, input_size-end)
 
-            if clip_input_2d is not None:
-                if not isinstance(clip_input_2d, tuple):
-                    input_idx = (clip_input_2d, input_idx)
-                else:
-                    input_idx = clip_input_2d + (input_idx,)
-
-            if clip_win_2d is not None:
-                if not isinstance(clip_input_2d, tuple):
-                    win_idx = (clip_win_2d, win_idx)
-                else:
-                    win_idx = clip_win_2d + (win_idx,)
-
-            yield input_idx, win_idx, iter_2d + (w_iter,)
-            w_iter += 1
-
-    def slide_win_2d(clip_input_3d=None, clip_win_3d=None, iter_3d=()):
-        h_iter = 0
-        h_start, h_stop = 0 + kh_radius - p_height, i_height - kh_radius + p_height
-        for h in range(h_start, h_stop, s_height):
-            h_beg, h_end = h - kh_radius, h + kh_radius + 1
-
-            if 0 <= h_beg and h_end <= i_height:
-                clip_input = slice(h_beg, h_end)
-                clip_win = slice(0, k_height)
-            else:
-                assert not (h_beg < 0 and h_end > i_height)
-                if h_beg < 0:
-                    clip_input = slice(0, h_end)
-                    clip_win = slice(-h_beg, k_height)
-                else:
-                    clip_input = slice(h_beg, i_height)
-                    clip_win = slice(0, i_height-h_end)
-
-            if clip_input_3d is not None:
-                clip_input = (clip_input_3d, clip_input)
-
-            if clip_win_3d is not None:
-                clip_win = (clip_win_3d, clip_win)
-
-            yield clip_input, clip_win, iter_3d + (h_iter,)
-            h_iter += 1
-
-    def slide_win_3d():
-        d_iter = 0
-        d_start, d_stop = 0 + kd_radius - p_depth, i_depth - kd_radius + p_depth
-        for d in range(d_start, d_stop, s_depth):
-            d_beg, d_end = d - kd_radius, d + kd_radius + 1
-
-            if 0 <= d_beg and d_end <= i_height:
-                clip_input = slice(d_beg, d_end)
-                clip_win = slice(0, k_depth)
-            else:
-                assert not (d_beg < 0 and d_end > i_depth)
-                if d_beg < 0:
-                    clip_input = slice(0, d_end)
-                    clip_win = slice(-d_beg, k_depth)
-                else:
-                    clip_input = slice(d_beg, i_depth)
-                    clip_win = slice(0, i_depth-d_end)
-
-            yield clip_input, clip_win, (d_iter,)
-            d_iter += 1
+            yield clip_input + (input_idx,), clip_win + (win_idx,), prev_iter + (n,)
+            n += 1
 
     if kernel_dim == 1:
-        return slide_win_1d()
+        for win in slide(i_width, k_width, s_width, p_width):
+            yield win
 
     if kernel_dim == 2:
-        for i_2d, w_2d, h in slide_win_2d():
-            for idx in slide_win_1d(i_2d, w_2d, h):
-                yield idx
+        for win_2d in slide(i_height, k_height, s_height, p_height):
+            for win in slide(i_width, k_width, s_width, p_width, *win_2d):
+                yield win
 
     if kernel_dim == 3:
-        for i_3d, w_3d, d in slide_win_3d():
-            for i_2d, w_2d, h in slide_win_2d(i_3d, w_3d, d):
-                for idx in slide_win_1d(i_2d, w_2d, h):
-                    yield idx
+        for win_3d in slide(i_depth, k_depth, s_depth, p_depth):
+            for win_2d in slide(i_height, k_height, s_height, p_height, *win_3d):
+                for win in slide(i_width, k_width, s_width, p_width, *win_2d):
+                    yield win
 
 
 def calc_conv(signals, filters, stride, padding):
@@ -266,6 +209,8 @@ def calc_conv(signals, filters, stride, padding):
     in_ch, out_ch = flt_shape[-2], flt_shape[-1]
 
     sig_buf = np.zeros((batch_size,) + kernel_shape + (in_ch,))
+    buf_size = np.prod((batch_size,) + kernel_shape)
+
     sig_axes = [ax+1 for ax in range(len(kernel_shape) + 1)]
     flt_axes = [ax for ax in range(len(kernel_shape) + 1)]
 
@@ -280,7 +225,7 @@ def calc_conv(signals, filters, stride, padding):
             for w in w_idx:
                 win_size *= w.stop - w.start
 
-        if win_size < sig_buf.size:
+        if win_size < buf_size:
             sig_buf[:] = 0
 
         sig_buf[batch_index + w_idx] = signals[batch_index + i_idx]
@@ -322,23 +267,18 @@ def calc_grad(gradients, signals, filters, stride, padding):
     batch_size = conv_shape[0]
     in_ch, out_ch = flt_shape[-2], flt_shape[-1]
 
-    grad_pad = []
-    for i in range(len(padding)):
-        in_pad = padding[i]
-        if not in_pad:  # VALID
-            grad_pad.append(kernel_shape[i] - 1)
-        else:  # SAME
-            grad_pad.append(in_pad)
-    padding_g = tuple(grad_pad)
-
     grad_buf = np.zeros((batch_size,) + kernel_shape + (out_ch,))
+    buf_size = np.prod((batch_size,) + kernel_shape)
+
     grad_axes = [ax+1 for ax in range(len(kernel_shape) + 1)]
     flt_axes = [ax for ax in range(len(kernel_shape) + 1)]
 
     sig_grad = np.zeros(sig_shape)
     batch_index = (slice(0, batch_size),)
 
-    def fill_buf(i_idx, w_idx):
+    def fill_buf(w_idx, w_pos):
+        grad_buf[:] = gradients[batch_index + w_pos]
+
         if not isinstance(w_idx, tuple):
             win_size = w_idx.stop - w_idx.start
         else:
@@ -346,25 +286,42 @@ def calc_grad(gradients, signals, filters, stride, padding):
             for w in w_idx:
                 win_size *= w.stop - w.start
 
-        if win_size < grad_buf.size:
+        if win_size < buf_size:
+            batch_index + w_idx
             grad_buf[:] = 0
 
-        grad_buf[batch_index + w_idx] = gradients[batch_index + i_idx]
-
-    def flush_buf(w_pos):
-        print(grad_buf)
+    def flush_buf(i_idx):
         conv_result = np.tensordot(grad_buf, filters_t, (grad_axes, flt_axes))
         assert conv_result.shape == (batch_size, in_ch)
-        sig_grad[batch_index + w_pos] = conv_result
+        sig_grad[batch_index + i_idx] += conv_result
 
-    for input_idx, win_idx, win_pos in slide_window(output_shape, kernel_shape, stride, padding_g):
-        fill_buf(input_idx, win_idx)
+    for input_idx, win_idx, win_pos in slide_window(input_shape, kernel_shape, stride, padding):
+        fill_buf(win_idx)
         flush_buf(win_pos)
 
     return sig_grad
 
 
 if __name__ == '__main__':
+
+    def test1d(batch_, is_same_, stride):
+        in_ch_, out_ch_ = 3, 6
+        sig_shape_ = (batch_, 5, in_ch_)
+        flt_shape_ = (3, in_ch_, out_ch_)
+
+        sig_in_ = (np.arange(np.prod(sig_shape_)) + 1).reshape(sig_shape_)
+        flt_ke_ = -(np.arange(np.prod(flt_shape_)) + 1).reshape(flt_shape_)
+        # print(sig_in_)
+        # print(flt_ke_)
+        # print(out_grad_)
+
+        padding_ = (1,) if is_same_ else (0,)
+        strides_ = (stride,)
+        conv2d = calc_conv(sig_in_, flt_ke_, strides_, padding_)
+        print(conv2d.shape)
+        print(conv2d)
+
+    test1d(1, False, 1)
 
     def test2d(batch_, is_same_, stride):
         in_ch_, out_ch_ = 3, 6
@@ -380,14 +337,14 @@ if __name__ == '__main__':
         padding_ = (1, 1) if is_same_ else (0, 0)
         strides_ = (stride, stride)
         conv2d = calc_conv(sig_in_, flt_ke_, strides_, padding_)
-        # print(conv2d.shape)
-        # print(conv2d)
+        print(conv2d.shape)
+        print(conv2d)
 
-        grad_shape_ = guess_conv_op_result_shape(sig_shape_, flt_shape_, strides_, padding_)
-        out_grad_ = np.zeros(grad_shape_) + 1
-        conv2d_g = calc_grad(out_grad_, sig_in_, flt_ke_, strides_, padding_)
-        print(conv2d_g.shape)
-        print(conv2d_g)
+        # grad_shape_ = guess_conv_op_result_shape(sig_shape_, flt_shape_, strides_, padding_)
+        # out_grad_ = np.zeros(grad_shape_) + 1
+        # conv2d_g = calc_grad(out_grad_, sig_in_, flt_ke_, strides_, padding_)
+        # print(conv2d_g.shape)
+        # print(conv2d_g)
 
     test2d(1, False, 1)
     # test2d(1, True, 1)
