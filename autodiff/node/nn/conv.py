@@ -111,9 +111,7 @@ def guess_conv_op_result_shape(signal_shape, filter_shape, stride, padding):
     assert sig_in_channel == flt_in_channel
 
     input_shape = signal_shape[1:-1]
-    kernel_shape = filter_shape[:-(f_dim-2)]
-    assert input_shape == kernel_shape
-
+    kernel_shape = filter_shape[:-2]
     output_shape = [batch_size]
     for i in range(k_dim):
         input_size, kernel_size = input_shape[i], kernel_shape[i]
@@ -132,7 +130,7 @@ def guess_conv_op_result_shape(signal_shape, filter_shape, stride, padding):
 
 def slide_window(input_shape, kernel_shape, stride, padding):
     '''
-    将样本数据分解为多个 kernel_shape 对应的数据窗口，方便卷积计算
+        滑动窗口，计算并返回卷积计算所需的索引
         input_shape: 单个样本数据，格式为：(i_depth, i_height, i_width)
         kernel_shape: 卷积核形状，格式为：(k_depth, k_height, k_width)
         stride: 卷积滑动步长，格式为：(s_depth, s_height, s_width)
@@ -153,12 +151,9 @@ def slide_window(input_shape, kernel_shape, stride, padding):
     assert k_width % 2 and k_height % 2 and k_depth % 2
     kw_radius, kh_radius, kd_radius = k_width//2, k_height//2, k_depth//2
 
-    w_start, w_stop = 0 + kw_radius - p_width, i_width - kw_radius + p_width
-    h_start, h_stop = 0 + kh_radius - p_height, i_height - kh_radius + p_height
-    d_start, d_stop = 0 + kd_radius - p_depth, i_depth - kd_radius + p_depth
-
-    def slide_win_1d(clip_input_2d=None, clip_win_2d=None, height_idx=()):
-
+    def slide_win_1d(clip_input_2d=None, clip_win_2d=None, iter_2d=()):
+        w_iter = 0
+        w_start, w_stop = 0 + kw_radius - p_width, i_width - kw_radius + p_width
         for w in range(w_start, w_stop, s_width):
             w_beg, w_end = w - kw_radius, w + kw_radius + 1
             if 0 <= w_beg and w_end <= i_width:
@@ -185,10 +180,12 @@ def slide_window(input_shape, kernel_shape, stride, padding):
                 else:
                     win_idx = clip_win_2d + (win_idx,)
 
-            yield input_idx, win_idx, height_idx + (w,)
+            yield input_idx, win_idx, iter_2d + (w_iter,)
+            w_iter += 1
 
-    def slide_win_2d(clip_input_3d=None, clip_win_3d=None, depth_idx=None):
-
+    def slide_win_2d(clip_input_3d=None, clip_win_3d=None, iter_3d=()):
+        h_iter = 0
+        h_start, h_stop = 0 + kh_radius - p_height, i_height - kh_radius + p_height
         for h in range(h_start, h_stop, s_height):
             h_beg, h_end = h - kh_radius, h + kh_radius + 1
 
@@ -210,10 +207,12 @@ def slide_window(input_shape, kernel_shape, stride, padding):
             if clip_win_3d is not None:
                 clip_win = (clip_win_3d, clip_win)
 
-            yield clip_input, clip_win, (h,) if not depth_idx else (depth_idx, h)
+            yield clip_input, clip_win, iter_3d + (h_iter,)
+            h_iter += 1
 
     def slide_win_3d():
-
+        d_iter = 0
+        d_start, d_stop = 0 + kd_radius - p_depth, i_depth - kd_radius + p_depth
         for d in range(d_start, d_stop, s_depth):
             d_beg, d_end = d - kd_radius, d + kd_radius + 1
 
@@ -229,7 +228,8 @@ def slide_window(input_shape, kernel_shape, stride, padding):
                     clip_input = slice(d_beg, i_depth)
                     clip_win = slice(0, i_depth-d_end)
 
-            yield clip_input, clip_win, d
+            yield clip_input, clip_win, (d_iter,)
+            d_iter += 1
 
     if kernel_dim == 1:
         return slide_win_1d()
@@ -265,13 +265,12 @@ def calc_conv(signals, filters, stride, padding):
     batch_size = sig_shape[0]
     in_ch, out_ch = flt_shape[-2], flt_shape[-1]
 
-    batch_kernel_size = (batch_size, ) + kernel_shape
-    sig_buf = np.zeros(batch_kernel_size + (in_ch,))
-
+    sig_buf = np.zeros((batch_size,) + kernel_shape + (in_ch,))
     sig_axes = [ax+1 for ax in range(len(kernel_shape) + 1)]
     flt_axes = [ax for ax in range(len(kernel_shape) + 1)]
 
     conv_output = np.zeros(out_shape)
+    batch_index = (slice(0, batch_size),)
 
     def fill_buf(i_idx, w_idx):
         if not isinstance(w_idx, tuple):
@@ -284,12 +283,12 @@ def calc_conv(signals, filters, stride, padding):
         if win_size < sig_buf.size:
             sig_buf[:] = 0
 
-        sig_buf[:, w_idx] = signals[:, i_idx]
+        sig_buf[batch_index + w_idx] = signals[batch_index + i_idx]
 
     def flush_buf(w_pos):
         conv_result = np.tensordot(sig_buf, filters, (sig_axes, flt_axes))
         assert conv_result.shape == (batch_size, out_ch)
-        conv_output[:, w_pos] = conv_result
+        conv_output[batch_index + w_pos] = conv_result
 
     for input_idx, win_idx, win_pos in slide_window(input_shape, kernel_shape, stride, padding):
         fill_buf(input_idx, win_idx)
@@ -298,66 +297,118 @@ def calc_conv(signals, filters, stride, padding):
     return conv_output
 
 
-def acc_grad(conv_grad, sig_shape, flt_shape, stride, padding):
+def calc_grad(gradients, signals, filters, stride, padding):
     '''
         累加梯度
-        sig_grad: 卷积结果对应梯度，格式为：[batch_size, o_depth, o_height, o_width, in_channel]
-        flt_shape: 滤波器，格式为：[k_depth, k_height, k_width, in_channel, out_channel]
+        gradients: 上层梯度，格式为：[batch_size, o_depth, o_height, o_width, out_channel]
+        signals: 样本数据，格式为：[batch_size, i_depth, i_height, i_width, in_channel]
+        filters: 滤波器，格式为：[k_depth, k_height, k_width, in_channel, out_channel]
         stride: 卷积滑动步长，格式为：(s_depth, s_height, s_width)
         padding: 输入边界填充量，格式为：(p_depth, p_height, p_width)
     '''
 
+    filters_t = filters.swapaxes(-2, -1)
+
+    sig_shape = signals.shape
+    flt_shape = filters.shape
     conv_shape = guess_conv_op_result_shape(sig_shape, flt_shape, stride, padding)
-    assert conv_grad.shape == conv_shape
+    assert gradients.shape == conv_shape
 
-    conv_shape = conv_shape[1:]
-    conv_grad = np.sum(conv_grad, axis=0)
-    assert conv_grad.shape == conv_shape
-
+    output_shape = conv_shape[1:-1]
     input_shape = sig_shape[1:-1]
     kernel_shape = flt_shape[:-2]
+    assert len(kernel_shape) == len(padding)
 
-    batch_size = sig_shape[0]
+    batch_size = conv_shape[0]
     in_ch, out_ch = flt_shape[-2], flt_shape[-1]
 
-    batch_kernel_size = (batch_size,) + kernel_shape
-    grad_buf = np.zeros(batch_kernel_size + (in_ch,))
+    grad_pad = []
+    for i in range(len(padding)):
+        in_pad = padding[i]
+        if not in_pad:  # VALID
+            grad_pad.append(kernel_shape[i] - 1)
+        else:  # SAME
+            grad_pad.append(in_pad)
+    padding_g = tuple(grad_pad)
 
-    flt_grad = np.zeros(flt_shape)
+    grad_buf = np.zeros((batch_size,) + kernel_shape + (out_ch,))
+    grad_axes = [ax+1 for ax in range(len(kernel_shape) + 1)]
+    flt_axes = [ax for ax in range(len(kernel_shape) + 1)]
 
-    for input_idx, win_idx, win_pos in slide_window(input_shape, kernel_shape, stride, padding):
-        conv_grad[:, win_pos]
-        pass
+    sig_grad = np.zeros(sig_shape)
+    batch_index = (slice(0, batch_size),)
 
-    return flt_grad
+    def fill_buf(i_idx, w_idx):
+        if not isinstance(w_idx, tuple):
+            win_size = w_idx.stop - w_idx.start
+        else:
+            win_size = 1
+            for w in w_idx:
+                win_size *= w.stop - w.start
+
+        if win_size < grad_buf.size:
+            grad_buf[:] = 0
+
+        grad_buf[batch_index + w_idx] = gradients[batch_index + i_idx]
+
+    def flush_buf(w_pos):
+        print(grad_buf)
+        conv_result = np.tensordot(grad_buf, filters_t, (grad_axes, flt_axes))
+        assert conv_result.shape == (batch_size, in_ch)
+        sig_grad[batch_index + w_pos] = conv_result
+
+    for input_idx, win_idx, win_pos in slide_window(output_shape, kernel_shape, stride, padding_g):
+        fill_buf(input_idx, win_idx)
+        flush_buf(win_pos)
+
+    return sig_grad
 
 
 if __name__ == '__main__':
-    # is_same = False
-    # in_ch = 2
-    # sig_in = (np.arange(7*in_ch) + 1).reshape((7, in_ch))
-    # ken_sh = (3,in_ch)
-    # print(sig_in)
-    # print(ken_sh)
-    # for buf in im2col(sig_in, ken_sh, (1,), (1,) if is_same else (0,)):
-    #     print(buf.reshape((3, in_ch)))
 
-    # is_same = True
-    # in_ch = 2
-    # sig_in = (np.arange(25*in_ch) + 1).reshape((5, 5, in_ch))
-    # ken_sh = (3,3)
-    # print(sig_in)
-    # print(ken_sh)
-    # for buf in im2col(sig_in, ken_sh, (1,1), (1,1) if is_same else (0,0)):
-    #     print(buf.reshape((3,3, in_ch)))
+    def test2d(batch_, is_same_, stride):
+        in_ch_, out_ch_ = 3, 6
+        sig_shape_ = (batch_, 5, 5, in_ch_)
+        flt_shape_ = (3, 3, in_ch_, out_ch_)
 
-    # is_same = False
-    # in_ch = 1
-    # sig_in = (np.arange(125*in_ch) + 1).reshape((5, 5, 5, in_ch))
-    # ken_sh = (3,3,3)
-    # print(sig_in)
-    # print(ken_sh)
-    # for buf in im2col(sig_in, ken_sh, (1,1,1), (1,1,1) if is_same else (0,0,0)):
-    #     print(buf.reshape((3,3,3, in_ch)))
+        sig_in_ = (np.arange(np.prod(sig_shape_)) + 1).reshape(sig_shape_)
+        flt_ke_ = -(np.arange(np.prod(flt_shape_)) + 1).reshape(flt_shape_)
+        # print(sig_in_)
+        # print(flt_ke_)
+        # print(out_grad_)
 
-    pass
+        padding_ = (1, 1) if is_same_ else (0, 0)
+        strides_ = (stride, stride)
+        conv2d = calc_conv(sig_in_, flt_ke_, strides_, padding_)
+        # print(conv2d.shape)
+        # print(conv2d)
+
+        grad_shape_ = guess_conv_op_result_shape(sig_shape_, flt_shape_, strides_, padding_)
+        out_grad_ = np.zeros(grad_shape_) + 1
+        conv2d_g = calc_grad(out_grad_, sig_in_, flt_ke_, strides_, padding_)
+        print(conv2d_g.shape)
+        print(conv2d_g)
+
+    test2d(1, False, 1)
+    # test2d(1, True, 1)
+    # test2d(1, False, 2)
+    # test2d(1, True, 2)
+
+    # def test3d(batch_, is_same_, stride):
+    #     in_ch_, out_ch_ = 3, 6
+    #     sig_shape_ = (batch_, 5, 5, 5, in_ch_)
+    #     flt_shape_ = (3, 3, 3, in_ch_, out_ch_)
+    #     sig_in_ = (np.arange(np.prod(sig_shape_)) + 1).reshape(sig_shape_)
+    #     flt_ke_ = (np.arange(np.prod(flt_shape_)) + 1).reshape(flt_shape_)
+    #     padding_ = (1, 1, 1) if is_same_ else (0, 0, 0)
+    #     strides = (stride, stride, stride)
+    #     conv2d = calc_conv(sig_in_,flt_ke_, strides, padding_)
+    #     print(conv2d.shape)
+    #     print(conv2d)
+
+    # test3d(1, False, 1)
+    # test3d(1, True, 1)
+    # test3d(1, False, 2)
+    # test3d(1, True, 2)
+
+
