@@ -218,12 +218,10 @@ def calc_conv(signals, filters, stride, padding):
     batch_index = (slice(0, batch_size),)
 
     def fill_buf(i_idx, w_idx):
-        if not isinstance(w_idx, tuple):
-            win_size = w_idx.stop - w_idx.start
-        else:
-            win_size = 1
-            for w in w_idx:
-                win_size *= w.stop - w.start
+
+        win_size = 1
+        for w in w_idx:
+            win_size *= w.stop - w.start
 
         if win_size < buf_size:
             sig_buf[:] = 0
@@ -268,8 +266,6 @@ def calc_grad(gradients, signals, filters, stride, padding):
     in_ch, out_ch = flt_shape[-2], flt_shape[-1]
 
     grad_buf = np.zeros((batch_size,) + kernel_shape + (out_ch,))
-    buf_size = np.prod((batch_size,) + kernel_shape)
-
     grad_axes = [ax+1 for ax in range(len(kernel_shape) + 1)]
     flt_axes = [ax for ax in range(len(kernel_shape) + 1)]
 
@@ -277,27 +273,20 @@ def calc_grad(gradients, signals, filters, stride, padding):
     batch_index = (slice(0, batch_size),)
 
     def fill_buf(w_idx, w_pos):
-        grad_buf[:] = gradients[batch_index + w_pos]
+        grad_buf[:] = 0
+        grad_buf[batch_index + w_idx] = 1
 
-        if not isinstance(w_idx, tuple):
-            win_size = w_idx.stop - w_idx.start
-        else:
-            win_size = 1
-            for w in w_idx:
-                win_size *= w.stop - w.start
-
-        if win_size < buf_size:
-            batch_index + w_idx
-            grad_buf[:] = 0
+        grad_buf[:] *= gradients[batch_index + w_pos]
 
     def flush_buf(i_idx):
         conv_result = np.tensordot(grad_buf, filters_t, (grad_axes, flt_axes))
         assert conv_result.shape == (batch_size, in_ch)
         sig_grad[batch_index + i_idx] += conv_result
+        print(i_idx)
 
     for input_idx, win_idx, win_pos in slide_window(input_shape, kernel_shape, stride, padding):
-        fill_buf(win_idx)
-        flush_buf(win_pos)
+        fill_buf(win_idx, win_pos)
+        flush_buf(input_idx)
 
     return sig_grad
 
@@ -321,7 +310,14 @@ if __name__ == '__main__':
         print(conv2d.shape)
         print(conv2d)
 
-    test1d(1, False, 1)
+        grad_shape_ = guess_conv_op_result_shape(sig_shape_, flt_shape_, strides_, padding_)
+        out_grad_ = np.zeros(grad_shape_) + 1
+        conv1d_g = calc_grad(out_grad_, sig_in_, flt_ke_, strides_, padding_)
+        print(conv1d_g.shape)
+        print(conv1d_g)
+
+    # test1d(1, False, 1)
+    test1d(1, True, 1)
 
     def test2d(batch_, is_same_, stride):
         in_ch_, out_ch_ = 3, 6
@@ -346,7 +342,7 @@ if __name__ == '__main__':
         # print(conv2d_g.shape)
         # print(conv2d_g)
 
-    test2d(1, False, 1)
+    # test2d(1, False, 1)
     # test2d(1, True, 1)
     # test2d(1, False, 2)
     # test2d(1, True, 2)
