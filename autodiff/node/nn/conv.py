@@ -253,7 +253,6 @@ def calc_grad(gradients, signals, filters, stride, padding):
     assert gradients.shape == conv_shape
 
     output_shape = conv_shape[1:-1]
-    input_shape = sig_shape[1:-1]
     kernel_shape = flt_shape[:-2]
     assert len(kernel_shape) == len(padding)
 
@@ -266,9 +265,8 @@ def calc_grad(gradients, signals, filters, stride, padding):
     grad_axes = [ax+1 for ax in range(len(kernel_shape) + 1)]
     flt_axes = [ax for ax in range(len(kernel_shape))] + [len(kernel_shape)+1]
 
-    rot_180 = [slice(0, kernel_shape[i]) for i in range(len(kernel_shape))]
-    rot_filters = filters[rot_180]
-
+    rot_filters = filters[::-1]
+    grad_stride = (1,) * len(kernel_shape)
     grad_padding = tuple([(kernel_shape[i]-1) // (1 if not padding[i] else 2)
                           for i in range(len(kernel_shape))])
 
@@ -284,12 +282,29 @@ def calc_grad(gradients, signals, filters, stride, padding):
     def flush_buf(w_pos):
         conv_result = np.tensordot(grad_buf, rot_filters, (grad_axes, flt_axes))
         assert conv_result.shape == (batch_size, in_ch)
-        sig_grad[batch_index + w_pos] = conv_result
+        # sig_grad[batch_index + w_pos] += conv_result
 
-    for output_idx, win_idx, win_pos in slide_window(output_shape, kernel_shape, stride, grad_padding):
+        if np.prod(stride) == len(stride):
+            sig_grad[batch_index + w_pos] = conv_result
+        else:
+            k_idx = []
+            for i in range(len(stride)):
+                if stride[i] == 1:
+                    k_idx.append(w_pos[i])
+                    continue
+                p, s, k = w_pos[-1 - i], stride[i] - 1, kernel_shape[i]
+                beg = p - s if p-s > 0 else 0
+                end = p + s if p+s < k else k
+                k_idx.append(slice(beg, end))
+            print('+', w_pos, tuple(k_idx))
+            w_pos = tuple(k_idx)
+            sig_grad[batch_index + w_pos] += conv_result
+            print('+', sig_grad[batch_index + w_pos].shape, conv_result.shape)
+
+    for output_idx, win_idx, win_pos in slide_window(output_shape, kernel_shape, grad_stride, grad_padding):
         fill_buf(output_idx, win_idx)
         flush_buf(win_pos)
-        # print('>', output_idx, win_idx, win_pos)
+        print('>', output_idx, win_idx, win_pos)
         # print(gradients[batch_index+output_idx].shape)
 
     return sig_grad
@@ -310,18 +325,20 @@ if __name__ == '__main__':
 
         padding_ = (1,) if is_same_ else (0,)
         strides_ = (stride,)
-        # conv2d = calc_conv(sig_in_, flt_ke_, strides_, padding_)
-        # print(conv2d.shape)
-        # print(conv2d)
+        conv2d = calc_conv(sig_in_, flt_ke_, strides_, padding_)
+        print(conv2d.shape)
+        print(conv2d)
 
         grad_shape_ = guess_conv_op_result_shape(sig_shape_, flt_shape_, strides_, padding_)
         out_grad_ = np.ones(grad_shape_)
         conv1d_g = calc_grad(out_grad_, sig_in_, flt_ke_, strides_, padding_)
-        print(conv1d_g.shape)
+        print('input', conv1d_g.shape)
         print(conv1d_g)
 
-    test1d(1, False, 1)
-    test1d(1, True, 1)
+    # test1d(1, False, 1)
+    # test1d(1, True, 1)
+    test1d(1, False, 2)
+    test1d(1, True, 2)
 
     def test2d(batch_, is_same_, stride):
         in_ch_, out_ch_ = 3, 6
