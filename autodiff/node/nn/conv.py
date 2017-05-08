@@ -209,7 +209,7 @@ def calc_conv(signals, filters, stride, padding):
     in_ch, out_ch = flt_shape[-2], flt_shape[-1]
 
     sig_buf = np.zeros((batch_size,) + kernel_shape + (in_ch,))
-    buf_size = np.prod(kernel_shape)
+    sig_buf_size = np.prod(kernel_shape)
 
     sig_axes = [ax+1 for ax in range(len(kernel_shape) + 1)]
     flt_axes = [ax for ax in range(len(kernel_shape) + 1)]
@@ -219,7 +219,7 @@ def calc_conv(signals, filters, stride, padding):
 
     for input_idx, win_idx, win_pos in slide_window(input_shape, kernel_shape, stride, padding):
         win_size = np.prod([w.stop - w.start for w in win_idx])
-        if win_size < buf_size:
+        if win_size < sig_buf_size:
             sig_buf[:] = 0
 
         sig_buf[batch_idx + win_idx] = signals[batch_idx + input_idx]
@@ -253,9 +253,17 @@ def calc_grad(gradients, signals, filters, stride, padding):
     in_ch, out_ch = flt_shape[-2], flt_shape[-1]
 
     rot_filters = filters[..., ::-1]
-    grad_buf = np.zeros((batch_size,) + (out_ch,))
+    grad_buf = np.zeros((batch_size, out_ch))
+    grad_mat = grad_buf.reshape((batch_size,) + (1,)*len(kernel_shape) + (1, out_ch))
+
+    sig_buf = np.zeros((batch_size,) + kernel_shape + (in_ch,))
+    sig_mat = sig_buf.reshape((batch_size,) + kernel_shape + (in_ch, 1))
+    sig_buf_size = np.prod(kernel_shape)
+
+    mul_buf = np.zeros((batch_size,) + kernel_shape + (in_ch, out_ch))
 
     sig_grad = np.zeros(sig_shape)
+    flt_grad = np.zeros(flt_shape)
     batch_idx = (slice(0, batch_size),)
 
     for input_idx, win_idx, win_pos in slide_window(input_shape, kernel_shape, stride, padding):
@@ -264,13 +272,21 @@ def calc_grad(gradients, signals, filters, stride, padding):
         assert conv_result.shape == (batch_size,) + kernel_shape + (in_ch,)
         sig_grad[batch_idx + input_idx] += conv_result[batch_idx + win_idx]
 
-    return sig_grad
+        win_size = np.prod([w.stop - w.start for w in win_idx])
+        if win_size < sig_buf_size:
+            sig_buf[:] = 0
+
+        sig_buf[batch_idx + win_idx] = signals[batch_idx + input_idx]
+        np.multiply(grad_mat, sig_mat, mul_buf)
+        flt_grad += mul_buf.sum(axis=0)
+
+    return sig_grad, flt_grad
 
 
 if __name__ == '__main__':
 
     def test1d(batch_, is_same_, stride):
-        in_ch_, out_ch_ = 3, 6
+        in_ch_, out_ch_ = 1, 2
         sig_shape_ = (batch_, 5, in_ch_)
         flt_shape_ = (3, in_ch_, out_ch_)
 
@@ -283,14 +299,16 @@ if __name__ == '__main__':
         padding_ = (1,) if is_same_ else (0,)
         strides_ = (stride,)
         conv2d = calc_conv(sig_in_, flt_ke_, strides_, padding_)
-        print(conv2d.shape)
-        print(conv2d)
+        # print(conv2d.shape)
+        # print(conv2d)
 
         grad_shape_ = guess_conv_op_result_shape(sig_shape_, flt_shape_, strides_, padding_)
         out_grad_ = np.ones(grad_shape_)
-        conv1d_g = calc_grad(out_grad_, sig_in_, flt_ke_, strides_, padding_)
-        print('input', conv1d_g.shape)
-        print(conv1d_g)
+        conv1d_g, conv1d_fg = calc_grad(out_grad_, sig_in_, flt_ke_, strides_, padding_)
+        # print('input', conv1d_g.shape)
+        # print(conv1d_g)
+        print('kernel', conv1d_fg.shape)
+        print(conv1d_fg)
 
     # test1d(2, False, 1)
     # test1d(2, True, 1)
@@ -316,9 +334,11 @@ if __name__ == '__main__':
 
         grad_shape_ = guess_conv_op_result_shape(sig_shape_, flt_shape_, strides_, padding_)
         out_grad_ = np.zeros(grad_shape_) + 1
-        conv2d_g = calc_grad(out_grad_, sig_in_, flt_ke_, strides_, padding_)
-        print('input', conv2d_g.shape)
-        print(conv2d_g)
+        conv2d_g, conv2d_fg = calc_grad(out_grad_, sig_in_, flt_ke_, strides_, padding_)
+        # print('input', conv2d_g.shape)
+        # print(conv2d_g)
+        print('kernel', conv2d_fg.shape)
+        print(conv2d_fg)
 
     # test2d(2, False, 1)
     # test2d(2, True, 1)

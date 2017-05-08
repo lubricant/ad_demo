@@ -5,7 +5,7 @@ sess = tf.Session()
 
 
 def test1d(batch_, is_same, stride):
-    in_ch_, out_ch_ = 3, 6
+    in_ch_, out_ch_ = 1, 2
     sig_shape_ = (batch_, 5, in_ch_)
     flt_shape_ = (3, in_ch_, out_ch_)
     sig_in_ = (np.arange(np.prod(sig_shape_),dtype=np.float64) + 1).reshape(sig_shape_).tolist()
@@ -18,14 +18,15 @@ def test1d(batch_, is_same, stride):
 
     sess.run(tf.global_variables_initializer())
     e = sess.run(c)
-    print(e.shape)
-    print(e)
+    # print(e.shape)
+    # print(e)
     f = sess.run(d)
-    print('input', f[0].shape)
-    print(f[0])
-    # print('kernel', f[1].shape)
-    # print(f[1])
+    # print('input', f[0].shape)
+    # print(f[0])
+    print('kernel', f[1].shape)
+    print(f[1])
     # print('---------------------------------------------')
+
 
 # test1d(2, False, 1)
 # test1d(2, True, 1)
@@ -51,10 +52,10 @@ def test2d(batch_, is_same, stride):
     # print(e.shape)
     # print(e)
     f = sess.run(d)
-    print('input', f[0].shape)
-    print(f[0])
-    # print('kernel', f[1].shape)
-    # print(f[1])
+    # print('input', f[0].shape)
+    # print(f[0])
+    print('kernel', f[1].shape)
+    print(f[1])
     # print('---------------------------------------------')
 
 # test2d(2, False, 1)

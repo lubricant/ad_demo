@@ -95,11 +95,17 @@ print(f.gradient)
 
 print('--------------------------------')
 
-# a = np.array([[[1,1],[1,1]]])
-a = np.array([[[1,1]]])[::,0]
-b = (np.arange(6) + 1).reshape((3,1,2))[..., ::-1]
-print(a)
-print(b)
-c = np.tensordot(a, b, ([-1], [-1]))
+# a = np.array([[[1,1]]])[::,0]
+# b = (np.arange(6) + 1).reshape((3,1,2))[..., ::-1]
+# print(a)
+# print(b)
+# c = np.tensordot(a, b, ([-1], [-1]))
+# print(c.shape)
+# print(c)
+
+a = np.array([[1,2,3],[4,5,6]])
+b = np.array([[1,2],[3,4]])
+c = a.reshape((2,1,1,3,1)) * b.reshape((2,1,1,1,2))
+# c = np.multiply(a.reshape((2,3,1)), b.reshape((2,1,2)))
 print(c.shape)
 print(c)
