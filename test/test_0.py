@@ -95,30 +95,11 @@ print(f.gradient)
 
 print('--------------------------------')
 
-
-# def lay_1(i2):
-#     for i in range(5):
-#         yield i2, 1
-#
-#
-# def lay_2():
-#     for i in range(5):
-#         yield i
-#
-#
-# def test():
-#     for i in lay_2():
-#         for j, k in lay_1(i):
-#             yield j, k
-#
-#
-# for x in test():
-#     print(x)
-
-a = np.arange(7*3*3*2).reshape((7,3,3,2))  # batch_size, height, width, in_ch
-b = np.arange(3*3*2*6).reshape((3,3,2,6))  # , height, width, in_ch, out_ch
-
-c = np.tensordot(a, b, axes=([1,2,3],[0,1,2]))
+# a = np.array([[[1,1],[1,1]]])
+a = np.array([[[1,1]]])[::,0]
+b = (np.arange(6) + 1).reshape((3,1,2))[..., ::-1]
+print(a)
+print(b)
+c = np.tensordot(a, b, ([-1], [-1]))
 print(c.shape)
-
-print([ax for ax in range(1)])
+print(c)
