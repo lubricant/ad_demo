@@ -7,7 +7,7 @@ from autodiff.node.unitary import Unitary
 import numpy as np
 
 
-class Convolute(Binary):
+class Conv123(Binary):
 
     def __init__(self, signals, filters, **args):
         '''
@@ -73,10 +73,17 @@ class Convolute(Binary):
                          guess_func=lambda foo, bar: guess_conv_op_result_shape(sig_shape, flt_shape, stride, padding))
 
     def eval_op(self, left, right):
-        pass
+        return calc_conv(left, right, self.stride, self.padding)
 
-    def eval_grad(self, left, right):
-        pass
+    def backward(self, grad):
+
+        if not self._prepare_backward(grad):
+            return
+
+        sig, flt = self._left.result, self._right.result
+        sig_grad, flt_grad = self._left_grad, self._right_grad
+        calc_grad(grad, sig, flt, self.stride, self.padding,
+                  sig_grad, flt_grad)
 
 
 def guess_conv_op_result_shape(signal_shape, filter_shape, stride, padding):
@@ -227,10 +234,13 @@ def calc_conv(signals, filters, stride, padding):
         assert conv_result.shape == (batch_size, out_ch)
         conv_output[batch_idx + win_pos] = conv_result
 
+    del sig_buf
+
     return conv_output
 
 
-def calc_grad(gradients, signals, filters, stride, padding):
+def calc_grad(gradients, signals, filters, stride, padding,
+              sig_grad_out=None, flt_grad_out=None):
     '''
         累加梯度
         gradients: 上层梯度，格式为：[batch_size, o_depth, o_height, o_width, out_channel]
@@ -262,8 +272,11 @@ def calc_grad(gradients, signals, filters, stride, padding):
 
     mul_buf = np.zeros((batch_size,) + kernel_shape + (in_ch, out_ch))
 
-    sig_grad = np.zeros(sig_shape)
-    flt_grad = np.zeros(flt_shape)
+    sig_grad = sig_grad_out if sig_grad_out is not None else np.zeros(sig_shape)
+    flt_grad = flt_grad_out if flt_grad_out is not None else np.zeros(flt_shape)
+    assert sig_grad.shape == sig_shape
+    assert flt_grad.shape == flt_shape
+
     batch_idx = (slice(0, batch_size),)
 
     for input_idx, win_idx, win_pos in slide_window(input_shape, kernel_shape, stride, padding):
@@ -279,6 +292,8 @@ def calc_grad(gradients, signals, filters, stride, padding):
         sig_buf[batch_idx + win_idx] = signals[batch_idx + input_idx]
         np.multiply(grad_mat, sig_mat, mul_buf)
         flt_grad += mul_buf.sum(axis=0)
+
+    del grad_buf, sig_buf, mul_buf
 
     return sig_grad, flt_grad
 
