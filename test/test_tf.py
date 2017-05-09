@@ -4,7 +4,7 @@ import numpy as np
 sess = tf.Session()
 
 
-def test1d(batch_, is_same, stride):
+def test1d_conv(batch_, is_same, stride):
     in_ch_, out_ch_ = 1, 2
     sig_shape_ = (batch_, 5, in_ch_)
     flt_shape_ = (3, in_ch_, out_ch_)
@@ -28,13 +28,13 @@ def test1d(batch_, is_same, stride):
     # print('---------------------------------------------')
 
 
-# test1d(2, False, 1)
-# test1d(2, True, 1)
-# test1d(2, False, 2)
-# test1d(2, True, 2)
+# test1d_conv(2, False, 1)
+# test1d_conv(2, True, 1)
+# test1d_conv(2, False, 2)
+# test1d_conv(2, True, 2)
 
 
-def test2d(batch_, is_same, stride):
+def test2d_conv(batch_, is_same, stride):
     in_ch_, out_ch_ = 3, 6
     sig_shape_ = (batch_, 5, 5, in_ch_)
     flt_shape_ = (3, 3, in_ch_, out_ch_)
@@ -58,7 +58,30 @@ def test2d(batch_, is_same, stride):
     print(f[1])
     # print('---------------------------------------------')
 
-# test2d(2, False, 1)
-# test2d(2, True, 1)
-test2d(2, False, 2)
-test2d(2, True, 2)
+# test2d_conv(2, False, 1)
+# test2d_conv(2, True, 1)
+# test2d_conv(2, False, 2)
+# test2d_conv(2, True, 2)
+
+
+def test2d_pool(batch_, stride=None):
+    k_size = 2
+    sig_shape_ = (batch_, 5, 5, 2)
+    sig_in_ = (np.arange(np.prod(sig_shape_),dtype=np.float64) + 1).reshape(sig_shape_)
+    print(sig_in_)
+    sig_in_ = sig_in_.tolist()
+
+    a = tf.Variable(sig_in_)
+    c = tf.nn.max_pool(a, ksize=[1, k_size, k_size, 1], strides=[1, k_size, k_size, 1], padding='VALID')
+    d = tf.gradients(c, [a])
+
+    sess.run(tf.global_variables_initializer())
+    e = sess.run(c)
+    print(e.shape)
+    print(e)
+    f = sess.run(d)
+    print('grad', f[0].shape)
+    print(f[0])
+    # print('---------------------------------------------')
+
+test2d_pool(1)

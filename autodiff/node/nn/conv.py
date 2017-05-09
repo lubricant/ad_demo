@@ -1,8 +1,6 @@
 
 
-from autodiff.node.node import Node
 from autodiff.node.binary import Binary
-from autodiff.node.unitary import Unitary
 
 import numpy as np
 
