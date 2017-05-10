@@ -163,24 +163,32 @@ def max_sampling(conv, size, stride):
 
     batch_size, channel = conv_shape[0], conv_shape[-1]
     batch_idx = (slice(0, batch_size),)
-    flat_fmt = (batch_size, np.prod(size), channel)
+    idx_len = batch_size * channel
 
     pool_shape = guess_pool_op_result_shape(conv_shape, size, stride)
     max_pool = np.zeros(pool_shape)
+    max_idx = np.zeros(pool_shape + (idx_len,), np.int32)
 
-    max_idx = np.zeros(pool_shape + (batch_size, channel), np.dtype(int))
-    max_buf = np.zeros((batch_size, channel), np.dtype(int))
+    idx_buf = np.zeros((batch_size, channel), np.int32)
+    flat_idx = idx_buf.ravel()
 
     conv_buf = np.zeros((batch_size,) + size + (channel,))
-    flat_buf = conv_buf.reshape((batch_size, np.prod(size), channel))
+    conv_sample = conv_buf.reshape((batch_size, np.prod(size), channel))
+    flat_conv = conv_buf.ravel()
+
+    offset = np.arange(idx_len)
+    offset *= np.prod(size)
 
     for input_idx, _, win_pos in slide_window(input_shape, size, stride, (0,) * len(size)):
         np.copyto(conv_buf, conv[batch_idx + input_idx])
-        np.argmax(flat_buf, axis=1, out=max_buf)
-        max_idx[batch_idx + win_pos] = max_buf
-        max_pool[batch_idx + win_pos] = flat_buf[:, max_buf]
+        np.argmax(conv_sample, axis=1, out=idx_buf)
+        flat_idx += offset
+        print('xxxx', max_pool[batch_idx + win_pos].shape)
+        print('xxxx', flat_conv[flat_idx])
+        max_idx[batch_idx + win_pos] = flat_idx
+        max_pool[batch_idx + win_pos] = flat_conv[flat_idx]
 
-    del max_buf, conv_buf, flat_buf
+    del idx_buf, conv_buf, flat_conv
 
     return max_pool, max_idx
 
@@ -234,7 +242,8 @@ if __name__ == '__main__':
         print(conv_grad.shape)
         print(conv_grad)
 
-    test2d(1)
+    # test2d(1)
+    test2d(2)
 
 
 
