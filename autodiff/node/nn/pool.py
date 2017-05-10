@@ -49,8 +49,9 @@ class MaxPool(Pooling):
         if not self._prepare_backward(grad):
             return
 
-        conv_grad = self._op_grad
-        conv_grad.reshape()
+        conv_shape, conv_grad = self._operand.shape, self._op_grad
+        calc_max_sampling_grad(conv_shape, self.size, self.stride,
+                               grad, self.max_indices, conv_grad)
 
 
 def guess_pool_op_result_shape(conv_shape, kernel_shape, stride):
@@ -170,32 +171,40 @@ def max_sampling(conv, size, stride):
     max_idx = np.zeros(pool_shape + (batch_size, channel), np.dtype(int))
     max_buf = np.zeros((batch_size, channel), np.dtype(int))
 
+    conv_buf = np.zeros((batch_size,) + size + (channel,))
+    flat_buf = conv_buf.reshape((batch_size, np.prod(size), channel))
+
     for input_idx, _, win_pos in slide_window(input_shape, size, stride, (0,) * len(size)):
-        sample = conv[batch_idx + input_idx].reshape(flat_fmt)
-        np.argmax(sample, axis=1, out=max_buf)
+        np.copyto(conv_buf, conv[batch_idx + input_idx])
+        np.argmax(flat_buf, axis=1, out=max_buf)
         max_idx[batch_idx + win_pos] = max_buf
-        max_pool[batch_idx + win_pos] = sample[:, max_buf]
+        max_pool[batch_idx + win_pos] = flat_buf[:, max_buf]
+
+    del max_buf, conv_buf, flat_buf
 
     return max_pool, max_idx
 
 
-def calc_max_sampling_grad(conv, size, stride, pool_grad, max_idx, conv_grad_out=None):
+def calc_max_sampling_grad(conv_shape, size, stride, pool_grad, max_idx, conv_grad_out=None):
 
-    conv_shape = conv.shape
     input_shape = conv_shape[1:-1]
     assert len(size) == len(stride)
 
     batch_size, channel = conv_shape[0], conv_shape[-1]
     batch_idx = (slice(0, batch_size),)
-    flat_fmt = (batch_size, np.prod(size), channel)
 
-    pool_shape = guess_pool_op_result_shape(conv_shape, size, stride)
-    conv_grad = conv_grad_out if conv_grad_out is not None else np.zeros(pool_shape)
-    assert conv_grad.shape == pool_shape
+    grad_buf = np.zeros((batch_size,) + size + (channel,))
+    flat_buf = grad_buf.reshape((batch_size, np.prod(size), channel))
+
+    conv_grad = conv_grad_out if conv_grad_out is not None else np.zeros(conv_shape)
+    assert conv_grad.shape == conv_shape
 
     for input_idx, _, win_pos in slide_window(input_shape, size, stride, (0,) * len(size)):
-        sample = conv_grad[batch_idx + input_idx].reshape(flat_fmt)
-        sample[:, max_idx[batch_idx + win_pos]] = pool_grad[batch_idx + win_pos]
+        grad_buf[:] = 0
+        flat_buf[:, max_idx[batch_idx + win_pos]] = pool_grad[batch_idx + win_pos]
+        conv_grad[batch_idx + input_idx] = grad_buf
+
+    del grad_buf, flat_buf
 
     return conv_grad
 
@@ -220,7 +229,8 @@ if __name__ == '__main__':
         print(max_idx_.shape)
         print(max_idx_)
         print('--------------')
-        conv_grad = calc_max_sampling_grad(sig_in_, size_, strides_, max_pool_, max_idx_)
+        pool_grad_ = np.ones(max_pool_.shape)
+        conv_grad = calc_max_sampling_grad(sig_shape_, size_, strides_, pool_grad_, max_idx_)
         print(conv_grad.shape)
         print(conv_grad)
 
