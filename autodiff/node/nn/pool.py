@@ -170,7 +170,7 @@ def max_sampling(conv, size, stride):
     flat_idx = idx_buf.ravel()
 
     conv_buf = np.zeros((batch_size,) + size + (channel,))
-    conv_sample = conv_buf.reshape((batch_size, np.prod(size), channel))
+    conv_sample = conv_buf.reshape((batch_size, np.prod(size), channel)).swapaxes(-2, -1)
     flat_conv = conv_buf.ravel()
 
     offset = np.arange(idx_len)
@@ -178,8 +178,11 @@ def max_sampling(conv, size, stride):
 
     for input_idx, _, win_pos in slide_window(input_shape, size, stride):
         np.copyto(conv_buf, conv[batch_idx + input_idx])
-        np.argmax(conv_sample, axis=1, out=idx_buf)
+        np.argmax(conv_sample, axis=-1, out=idx_buf)
+        print('ccc', conv_sample)
+        print('ccc', flat_conv)
         flat_idx += offset
+        print('idx', flat_idx)
         max_idx[batch_idx + win_pos] = flat_idx
         # print('pos', win_pos)
         # print('val', flat_conv[flat_idx])
@@ -219,14 +222,14 @@ def calc_max_sampling_grad(conv_shape, size, stride, pool_grad, max_idx, conv_gr
 if __name__ == '__main__':
 
     def test2d(batch_):
-        in_ch_ = 3
+        in_ch_ = 2
         sig_shape_ = (batch_, 5, 5, in_ch_)
         sig_in_ = (np.arange(np.prod(sig_shape_)) + 1).reshape(sig_shape_)
         print(sig_in_)
         # print(flt_ke_)
         # print(out_grad_)
 
-        s = 2
+        s = 3
         size_ = (s,) * 2
         strides_ = (s,) * 2
         max_pool_, max_idx_ = max_sampling(sig_in_, size_, strides_)

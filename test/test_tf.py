@@ -66,7 +66,7 @@ def test2d_conv(batch_, is_same, stride):
 
 def test2d_pool(batch_, stride=None):
     k_size = 3
-    sig_shape_ = (batch_, 5, 5, 1)
+    sig_shape_ = (batch_, 5, 5, 2)
     sig_in_ = (np.arange(np.prod(sig_shape_),dtype=np.float64) + 1).reshape(sig_shape_)
     print(sig_in_)
     sig_in_ = sig_in_.tolist()
@@ -84,5 +84,5 @@ def test2d_pool(batch_, stride=None):
     print(f[0])
     # print('---------------------------------------------')
 
-# test2d_pool(1)
-test2d_pool(2)
+test2d_pool(1)
+# test2d_pool(2)
