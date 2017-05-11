@@ -94,11 +94,11 @@ def guess_pool_op_result_shape(conv_shape, kernel_shape, stride):
     return tuple(output_shape)
 
 
-def slide_window(input_shape, kernel_shape, stride, padding):
+def slide_window(input_shape, kernel_shape, stride):
     '''
-        滑动窗口，计算并返回卷积计算所需的索引
+        滑动窗口，计算并返回池化计算所需的索引
         input_shape: 单个样本数据，格式为：(i_depth, i_height, i_width)
-        kernel_shape: 卷积核形状，格式为：(k_depth, k_height, k_width)
+        kernel_shape: 池化核形状，格式为：(k_depth, k_height, k_width)
         stride: 卷积滑动步长，格式为：(s_depth, s_height, s_width)
         padding: 输入边界填充量，格式为：(p_depth, p_height, p_width)
     '''
@@ -107,22 +107,19 @@ def slide_window(input_shape, kernel_shape, stride, padding):
     assert 1 <= kernel_dim <= 3
 
     input_dim = len(input_shape)
-    assert kernel_dim == input_dim == len(stride) == len(padding)
+    assert kernel_dim == input_dim == len(stride)
 
     k_width, k_height, k_depth = kernel_shape + (1,) * (3-kernel_dim)
     i_width, i_height, i_depth = input_shape + (1,) * (3-kernel_dim)
-    p_width, p_height, p_depth = padding + (0,) * (3-kernel_dim)
     s_width, s_height, s_depth = stride + (1,) * (3-kernel_dim)
-    assert k_width % 2 and k_height % 2 and k_depth % 2
 
     def slide(
-            input_size, win_size, step, pad,
+            input_size, win_size, step,
             clip_input=(), clip_win=(), prev_iter=()):
 
-        radius = win_size // 2
-        n, start, stop = 0, 0 + radius - pad, input_size - radius + pad
+        n, start, stop = 0, 0, input_size - (input_size % step)
         for i in range(start, stop, step):
-            beg, end = i - radius, i + radius + 1
+            beg, end = i, i + win_size
 
             if 0 <= beg and end <= input_size:
                 input_idx = slice(beg, end)
@@ -140,18 +137,18 @@ def slide_window(input_shape, kernel_shape, stride, padding):
             n += 1
 
     if kernel_dim == 1:
-        for win in slide(i_width, k_width, s_width, p_width):
+        for win in slide(i_width, k_width, s_width):
             yield win
 
     if kernel_dim == 2:
-        for win_2d in slide(i_height, k_height, s_height, p_height):
-            for win in slide(i_width, k_width, s_width, p_width, *win_2d):
+        for win_2d in slide(i_height, k_height, s_height):
+            for win in slide(i_width, k_width, s_width, *win_2d):
                 yield win
 
     if kernel_dim == 3:
-        for win_3d in slide(i_depth, k_depth, s_depth, p_depth):
-            for win_2d in slide(i_height, k_height, s_height, p_height, *win_3d):
-                for win in slide(i_width, k_width, s_width, p_width, *win_2d):
+        for win_3d in slide(i_depth, k_depth, s_depth):
+            for win_2d in slide(i_height, k_height, s_height, *win_3d):
+                for win in slide(i_width, k_width, s_width, *win_2d):
                     yield win
 
 
@@ -179,14 +176,15 @@ def max_sampling(conv, size, stride):
     offset = np.arange(idx_len)
     offset *= np.prod(size)
 
-    for input_idx, _, win_pos in slide_window(input_shape, size, stride, (0,) * len(size)):
+    for input_idx, _, win_pos in slide_window(input_shape, size, stride):
         np.copyto(conv_buf, conv[batch_idx + input_idx])
         np.argmax(conv_sample, axis=1, out=idx_buf)
         flat_idx += offset
-        print('xxxx', max_pool[batch_idx + win_pos].shape)
-        print('xxxx', flat_conv[flat_idx])
         max_idx[batch_idx + win_pos] = flat_idx
-        max_pool[batch_idx + win_pos] = flat_conv[flat_idx]
+        # print('pos', win_pos)
+        # print('val', flat_conv[flat_idx])
+        pool_win = max_pool[batch_idx + win_pos]
+        pool_win[:] = flat_conv[flat_idx].reshape(pool_win.shape)
 
     del idx_buf, conv_buf, flat_conv
 
@@ -202,15 +200,16 @@ def calc_max_sampling_grad(conv_shape, size, stride, pool_grad, max_idx, conv_gr
     batch_idx = (slice(0, batch_size),)
 
     grad_buf = np.zeros((batch_size,) + size + (channel,))
-    flat_buf = grad_buf.reshape((batch_size, np.prod(size), channel))
+    flat_buf = grad_buf.ravel()
 
     conv_grad = conv_grad_out if conv_grad_out is not None else np.zeros(conv_shape)
     assert conv_grad.shape == conv_shape
 
-    for input_idx, _, win_pos in slide_window(input_shape, size, stride, (0,) * len(size)):
+    for input_idx, _, win_pos in slide_window(input_shape, size, stride):
         grad_buf[:] = 0
-        flat_buf[:, max_idx[batch_idx + win_pos]] = pool_grad[batch_idx + win_pos]
-        conv_grad[batch_idx + input_idx] = grad_buf
+        flat_idx = max_idx[batch_idx + win_pos]
+        flat_buf[flat_idx] = pool_grad[batch_idx + win_pos].ravel()
+        conv_grad[batch_idx + input_idx] += grad_buf
 
     del grad_buf, flat_buf
 
@@ -220,27 +219,26 @@ def calc_max_sampling_grad(conv_shape, size, stride, pool_grad, max_idx, conv_gr
 if __name__ == '__main__':
 
     def test2d(batch_):
-        in_ch_ = 1
+        in_ch_ = 3
         sig_shape_ = (batch_, 5, 5, in_ch_)
         sig_in_ = (np.arange(np.prod(sig_shape_)) + 1).reshape(sig_shape_)
-        # print(sig_in_)
+        print(sig_in_)
         # print(flt_ke_)
         # print(out_grad_)
 
-        print(sig_in_)
-
-        size_ = (3, 3)
-        strides_ = (3, 3)
+        s = 2
+        size_ = (s,) * 2
+        strides_ = (s,) * 2
         max_pool_, max_idx_ = max_sampling(sig_in_, size_, strides_)
         print(max_pool_.shape)
         print(max_pool_)
         print(max_idx_.shape)
         print(max_idx_)
         print('--------------')
-        pool_grad_ = np.ones(max_pool_.shape)
-        conv_grad = calc_max_sampling_grad(sig_shape_, size_, strides_, pool_grad_, max_idx_)
-        print(conv_grad.shape)
-        print(conv_grad)
+        # pool_grad_ = np.ones(max_pool_.shape)
+        # conv_grad = calc_max_sampling_grad(sig_shape_, size_, strides_, pool_grad_, max_idx_)
+        # print(conv_grad.shape)
+        # print(conv_grad)
 
     # test2d(1)
     test2d(2)
