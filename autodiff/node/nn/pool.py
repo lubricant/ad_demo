@@ -18,6 +18,8 @@ class Pooling(Unitary):
                 使得每次窗口滑动取到的信息都不相互重叠
         '''
 
+        assert size is not None
+
         conv_shape = conv.shape
         assert 2 < len(conv_shape) < 6
 
@@ -35,9 +37,9 @@ class Pooling(Unitary):
 
 class MaxPool(Pooling):
 
-    def __init__(self, conv, size, stride=None):
+    def __init__(self, conv, **args):
         self.max_indices = None
-        super().__init__('max', conv, size, stride)
+        super().__init__('max', conv, **args)
 
     def eval_op(self, operand):
         max_idx, max_pool = max_sampling(operand, self.size, self.stride)
@@ -173,19 +175,18 @@ def max_sampling(conv, size, stride):
     conv_sample = conv_buf.reshape((batch_size, np.prod(size), channel)).swapaxes(-2, -1)
     flat_conv = conv_buf.ravel()
 
-    offset = np.arange(idx_len)
-    offset *= np.prod(size)
+    base = np.arange(batch_size, dtype=np.int32)
+    base *= np.prod(size) * channel
+    base = np.outer(base, np.ones(channel, dtype=np.int32))
+    base += np.arange(channel, dtype=np.int32)
+    offset = base.ravel()
 
     for input_idx, _, win_pos in slide_window(input_shape, size, stride):
         np.copyto(conv_buf, conv[batch_idx + input_idx])
         np.argmax(conv_sample, axis=-1, out=idx_buf)
-        print('ccc', conv_sample)
-        print('ccc', flat_conv)
+        flat_idx *= channel
         flat_idx += offset
-        print('idx', flat_idx)
         max_idx[batch_idx + win_pos] = flat_idx
-        # print('pos', win_pos)
-        # print('val', flat_conv[flat_idx])
         pool_win = max_pool[batch_idx + win_pos]
         pool_win[:] = flat_conv[flat_idx].reshape(pool_win.shape)
 
@@ -235,16 +236,16 @@ if __name__ == '__main__':
         max_pool_, max_idx_ = max_sampling(sig_in_, size_, strides_)
         print(max_pool_.shape)
         print(max_pool_)
-        print(max_idx_.shape)
-        print(max_idx_)
+        # print(max_idx_.shape)
+        # print(max_idx_)
         print('--------------')
-        # pool_grad_ = np.ones(max_pool_.shape)
-        # conv_grad = calc_max_sampling_grad(sig_shape_, size_, strides_, pool_grad_, max_idx_)
-        # print(conv_grad.shape)
-        # print(conv_grad)
+        pool_grad_ = np.ones(max_pool_.shape)
+        conv_grad = calc_max_sampling_grad(sig_shape_, size_, strides_, pool_grad_, max_idx_)
+        print(conv_grad.shape)
+        print(conv_grad)
 
     # test2d(1)
-    test2d(2)
+    test2d(3)
 
 
 

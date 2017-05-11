@@ -84,5 +84,5 @@ def test2d_pool(batch_, stride=None):
     print(f[0])
     # print('---------------------------------------------')
 
-test2d_pool(1)
+test2d_pool(3)
 # test2d_pool(2)

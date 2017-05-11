@@ -18,5 +18,5 @@ from .op.hype import Tanh
 
 from .nn.active import Sigmoid, ReLu
 from .nn.softmax import Softmax, SoftmaxLoss
-from .nn.maxout import Maxout
 from .nn.conv import Conv123
+from .nn.pool import MaxPool
