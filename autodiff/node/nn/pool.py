@@ -162,10 +162,11 @@ def max_sampling(conv, size, stride):
 
     batch_size, channel = conv_shape[0], conv_shape[-1]
     batch_idx = (slice(0, batch_size),)
-    idx_len = batch_size * channel
 
     pool_shape = guess_pool_op_result_shape(conv_shape, size, stride)
     max_pool = np.zeros(pool_shape)
+
+    idx_len = batch_size * channel
     max_idx = np.zeros(pool_shape + (idx_len,), np.int32)
 
     idx_buf = np.zeros((batch_size, channel), np.int32)
