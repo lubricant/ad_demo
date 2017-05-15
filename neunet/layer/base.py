@@ -2,49 +2,42 @@
 import numpy as np
 import autodiff as ad
 
-from autodiff.node import Node
 
+class PipelineLayer(object):
 
-class OutputLayer(object):
+    def __init__(self, name, shape, pre_order=None):
+        self._name = name
+        self._shape = shape
+        self._order = 0 if pre_order is None else pre_order + 1
+        self._input = self._output = None
 
-    def __init__(self, output_expr):
-        assert isinstance(output_expr, Node)
-        self.output = output_expr
+    def __repr__(self):
+        return self._name + ('' if not self._shape else str(list(self._shape)))
 
+    @property
     def output(self):
-        return self.output
+        return self._output
 
-
-class InputLayer(OutputLayer):
-
-    def __init__(self, input_shape):
-        assert len(input_shape) > 0
-        self.input = ad.const(input_shape, '???')
-        super().__init__(self.input)
-
-    def __repr__(self):
-        return 'Input' + str(list(self.input.shape))
-
+    @property
     def input(self):
-        return self.input
+        return self._input
+
+    @property
+    def order(self):
+        return self._order
+
+    @property
+    def shape(self):
+        return self._shape
 
 
-class HiddenLayer(object):
+class ParametricLayer(object):
 
-    def __init__(self, name, shape, order):
-        '''
-        对权重进行正则化，保证每个神经元输出方差一致
-        否则那些有着更多输入的神经元，输出有着更高的方差（过拟合）
-        '''
-        self.name = name
-        self.shape = shape
-        self.order = order
-
-    def __repr__(self):
-        return self.name + ('' if not self.shape else str(list(self.shape)))
+    def param(self):
+        raise NotImplementedError
 
     def grad(self):
         raise NotImplementedError
 
-    def update(self, value):
-        raise NotImplementedError
+
+

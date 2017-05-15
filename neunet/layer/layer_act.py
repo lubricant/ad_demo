@@ -3,20 +3,16 @@
 import numpy as np
 import autodiff as ad
 
-from .base import HiddenLayer
-from .base import OutputLayer
+from .base import PipelineLayer
 
 
-class ActiveLayer(HiddenLayer, OutputLayer):
+class ActiveLayer(PipelineLayer):
 
     def __init__(self, input_layer, active_type, *args):
-        assert isinstance(input_layer, OutputLayer)
-        input_shape = input_layer.output.shape
-        hidden_shape = input_shape
-        layer_order = input_layer.order if isinstance(input_layer, HiddenLayer) else 0
-
-        x = input_layer.output
-
+        assert isinstance(input_layer, PipelineLayer)
+        super(PipelineLayer).__init__('ACT<%s>' % active_type,
+                                      input_layer.shape,
+                                      input_layer.order)
         active_func = None
         assert active_type in ['sigmoid', 'tanh', 'relu']
         if active_type == 'sigmoid':
@@ -26,11 +22,6 @@ class ActiveLayer(HiddenLayer, OutputLayer):
         if active_type == 'relu':
             active_func = ad.relu
 
-        super(HiddenLayer).__init__('ACT<%s>' % active_type, hidden_shape, layer_order)
-        super(OutputLayer).__init__(active_func(x))
+        self._input = input_layer.output
+        self._output = active_func(self._input)
 
-    def grad(self):
-        return ()
-
-    def update(self, value):
-        raise NotImplementedError
