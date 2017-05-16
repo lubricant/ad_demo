@@ -9,11 +9,13 @@ class Reduce(Unitary):
     def __init__(self, o, name, axis):
 
         assert isinstance(axis, (int, None))
+
+        o_shape = o.shape
         if axis is not None:
-            pass
+            o_shape = o_shape[0:axis] + o_shape[axis:]
 
         self._axis = axis
-        super().__init__(o, code=name + ('' if axis is None else '[%d]' % axis))
+        super().__init__(o, code=name + ('' if axis is None else '[%d]' % axis), result_shape=o_shape)
 
 
 class Mean(Reduce):
@@ -22,10 +24,10 @@ class Mean(Reduce):
         super().__init__(o, 'mean', axis)
 
     def eval_op(self, operand):
-        return np.sin(operand)
+        return np.mean(operand, axis=self._axis)
 
     def eval_grad(self, operand):
-        return np.cos(operand)
+        pass
 
 
 class Sum(Reduce):
@@ -34,10 +36,10 @@ class Sum(Reduce):
         super().__init__(o, 'sum', axis)
 
     def eval_op(self, operand):
-        return np.sin(operand)
+        return np.sum(operand, axis=self._axis)
 
     def eval_grad(self, operand):
-        return np.cos(operand)
+        pass
 
 
 class Prod(Reduce):
@@ -46,7 +48,7 @@ class Prod(Reduce):
         super().__init__(o, 'prod', axis)
 
     def eval_op(self, operand):
-        return np.sin(operand)
+        return np.prod(operand, axis=self._axis)
 
     def eval_grad(self, operand):
-        return np.cos(operand)
+        pass

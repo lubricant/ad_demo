@@ -1,7 +1,5 @@
 
-from autodiff.node.node import Node
 from autodiff.node.binary import Binary
-from autodiff.node.unitary import Unitary
 
 import numpy as np
 
@@ -14,7 +12,7 @@ class SoftmaxLoss(Binary):
             prob: 原始概率，格式为 [batch_size, num_classes]
             correct: 期望输出
                 当输入为类型的索引时，格式为 [batch_size]，取值范围 0 ~ num_classes-1 (int)
-                当输入为期望概率时，格式为 [batch_size, num_classes]，取值范围为 0 ~ 1 (float)
+                当输入为期望概率时，格式为 [batch_size, num_classes]，取值范围为 0/1 (int) 且和为 1
         '''
 
         prob_shape, correct_shape = prob.shape, correct.shape
