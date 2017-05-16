@@ -17,6 +17,6 @@ from .op.trigon import Sin, Cos
 from .op.hype import Tanh
 
 from .nn.active import Sigmoid, ReLu
-from .nn.softmax import Softmax, SoftmaxLoss
+from .nn.softmax import SoftmaxLoss
 from .nn.conv import Conv123
 from .nn.pool import MaxPool

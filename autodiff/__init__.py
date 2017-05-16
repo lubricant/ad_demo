@@ -60,14 +60,9 @@ def relu(x):
     return node.ReLu(x)
 
 
-def maxout(x, i):
-    x = __ensure_node(x)
-    return node.Maxout(x, i)
-
-
-def softmax(x):
-    x = __ensure_node(x)
-    return node.Softmax(x)
+def softmax(a, b):
+    a, b = __ensure_node((a, b))
+    return node.SoftmaxLoss(a, b)
 
 
 def conv(a, b, **args):

@@ -6,85 +6,76 @@ from autodiff.node.unitary import Unitary
 import numpy as np
 
 
-class Softmax(Unitary):
-
-    def __init__(self, log_prob):
-        '''
-        计算 Softmax
-            log_prob: 原始概率，格式为 [batch_size, num_classes]
-        '''
-        assert len(log_prob.shape) == 2
-        super().__init__(log_prob, 'softmax')
-
-    def eval_op(self, log_prob):
-        log_prob -= np.max(log_prob, axis=0)
-        norm_prob = np.exp(log_prob)
-        return norm_prob / np.sum(norm_prob)
-
-    def eval_grad(self, norm_prob):
-        prob_eye = np.diag(norm_prob)
-        return prob_eye - np.outer(norm_prob, norm_prob)
-
-    def backward(self, grad, softmax_loss=False):
-
-        if not self._prepare_backward(grad):
-            return
-
-        if softmax_loss:
-            self._op_grad += grad
-            return
-
-        op_grad = self.eval_grad(self.result)
-        self._op_grad += op_grad @ grad
-
-
 class SoftmaxLoss(Binary):
 
     def __init__(self, prob, correct):
-        # correct should be int or 1-D array
-        assert isinstance(prob, Softmax)
-        assert len(prob.shape) == 1 and len(correct.shape) <= 1
-        super().__init__(prob, correct, code='softmax-loss', prior=0)
+        '''
+        计算 Softmax
+            prob: 原始概率，格式为 [batch_size, num_classes]
+            correct: 期望输出
+                当输入为类型的索引时，格式为 [batch_size]，取值范围 0 ~ num_classes-1 (int)
+                当输入为期望概率时，格式为 [batch_size, num_classes]，取值范围为 0 ~ 1 (float)
+        '''
 
-        self._shape = ()  # loss result is a prob value
-        self._correct_is_idx = not len(correct.shape)
-        if self._correct_is_idx:
-            assert np.size(prob) == np.size(correct)
+        prob_shape, correct_shape = prob.shape, correct.shape
+
+        assert len(prob_shape) == 2 and len(correct_shape) <= 2
+        if len(prob_shape) == len(correct_shape):
+            assert prob_shape == correct_shape
+        else:
+            assert prob_shape[0] == correct_shape[0]
+
+        super().__init__(prob, correct, code='softmax_loss', prior=0,
+                         guess_func=lambda a, b: prob_shape)
+
+    @staticmethod
+    def softmax(log_prob):
+
+        log_prob = np.copy(log_prob)
+
+        batch_size, _ = log_prob.shape
+        line_wise = (batch_size, 1)
+        sum_prob = max_prob = np.zeros(line_wise)  # share memory
+
+        np.max(log_prob, axis=1, out=max_prob.ravel())
+        log_prob -= max_prob
+
+        norm_prob = np.exp(log_prob)
+        np.sum(norm_prob, axis=1, out=sum_prob.ravel())
+        norm_prob /= sum_prob
+
+        return norm_prob
+
+    @staticmethod
+    def correct_idx(correct, prob_shape):
+
+        batch_size, num_classes = prob_shape
+
+        # each line of correct is binary(0/1) prob vector like [..., 1, ...]
+        # which index of 1 indicated the expected correct class
+        if len(correct.shape) == 2:
+            max_idx = np.arange(batch_size)
+            max_idx *= num_classes
+            max_idx += np.argmax(correct, axis=1)
+            correct = max_idx
+
+        # each value correct is a index of vector between [0, num_classes-1]
+        # which indicate the expected correct class
+        assert len(correct.shape) == 1
+        return correct
 
     def eval_op(self, prob, correct):
 
-        # actually, correct is not invoked in forward calculation
-        if self._correct_is_idx:
-            # correct should be a index of vector
-            # which indicate the expected correct class
-            assert isinstance(correct, int)
-            assert 0 <= correct < np.size(prob)
-            return -np.log(prob[correct])
-        else:
-            # correct should be binary(0/1) prob vector
-            # which index of 1 indicated the expected correct class
-            assert np.min(correct), np.max(correct) == (0, 1)
-            assert np.sum(correct) == 1
-            return -np.log(prob[np.argmax(correct)])
+        prob = self.softmax(prob)
+        correct = self.correct_idx(correct, prob.shape)
+
+        return -np.log(prob.ravel()[correct])
 
     def eval_grad(self, prob, correct):
-        if self._correct_is_idx:
-            # correct is a index of vector
-            # which indicate the expected correct class
-            assert isinstance(correct, int)
-            assert 0 <= correct < np.size(prob)
 
-            # equals to:
-            # prob -= [..., 1, ...]
-            prob[correct] -= 1.
-
-        else:
-            # correct is binary(0/1) prob vector like [..., 1, ...]
-            # which index of 1 indicated the expected correct class
-            assert np.min(correct), np.max(correct) == (0, 1)
-            assert np.sum(correct) == 1
-
-            prob -= correct
+        prob = self.softmax(prob)
+        correct = self.correct_idx(correct, prob.shape)
+        prob.ravel()[correct] -= 1
 
         # the error of the prob is the gradient of softmax
         return prob, 0.0  # gradient of correct is ignore
@@ -95,14 +86,11 @@ class SoftmaxLoss(Binary):
         if not self._prepare_backward(grad):
             return
 
-        assert isinstance(grad, (int, float))
-
-        # keep _left_grad and _right_grad be zeros
-
         prob, correct = self._left.result, self._right.result
-        softmax_grad, _ = self.eval_grad(np.copy(prob), correct)
+        softmax_grad, _ = self.eval_grad(prob, correct)
 
-        self._left.backward(grad * softmax_grad, True)
+        softmax_grad *= grad
+        self._left_grad += softmax_grad
 
 
 if __name__ == "__main__":
@@ -132,39 +120,27 @@ if __name__ == "__main__":
     # print(np.outer(norm_prob_, norm_prob_))
     # print(prob_mat_ @ prob_mat_.T)
 
-    batch_size_, num_classes_ = 2, 3
-    line_wise_ = (batch_size_, 1)
+    # batch_size_, num_classes_ = 2, 3
+    # line_wise_ = (batch_size_, 1)
+    #
+    # log_prob_ = np.array([[1, 2, 3],[4, 5, 3]])
+    # max_prob_ = np.max(log_prob_, axis=1).reshape(line_wise_)
+    # log_prob_ -= max_prob_
+    #
+    # norm_prob_ = np.exp(log_prob_)
+    # sum_prob_ = np.sum(norm_prob_, axis=1).reshape(line_wise_)
+    # norm_prob_ /= sum_prob_
+    #
+    # correct_ = np.array([[0, 1, 0],[0, 1, 0]])
+    #
+    # max_idx_ = np.arange(2)
+    # max_idx_ *= 3
+    # max_idx_ += np.argmax(correct_, axis=1)
+    #
+    # # one step
+    # grad_one = np.copy(norm_prob_)
+    # grad_one.ravel()[max_idx_] -= 1
+    # print(grad_one)
 
-    log_prob_ = np.array([[1, 2, 3],[4, 5, 3]])
-    max_prob_ = np.max(log_prob_, axis=1).reshape(line_wise_)
-    log_prob_ -= max_prob_
+    pass
 
-    norm_prob_ = np.exp(log_prob_)
-    sum_prob_ = np.sum(norm_prob_, axis=1).reshape(line_wise_)
-    norm_prob_ /= sum_prob_
-
-    correct_ = np.array([[0, 1, 0],[0, 1, 0]])
-
-    max_idx = np.arange(2)
-    max_idx *= 3
-    max_idx += np.argmax(correct_, axis=1)
-
-    # one step
-    grad_one = np.copy(norm_prob_)
-    grad_one.ravel()[max_idx] -= 1
-    print(grad_one)
-
-    # two step
-    prob_mat_ = norm_prob_.reshape(norm_prob_.shape + (1,))
-    prob_eye_ = np.diag(norm_prob_)
-
-    print()
-    grad_norm_ = prob_eye_ - prob_mat_ @ prob_mat_.T
-
-    grad_loss_ = np.zeros(norm_prob_.shape)
-    grad_loss_[np.argmax(correct_)] = -1.0 / norm_prob_[np.argmax(correct_)]
-    grad_two = grad_norm_ @ grad_loss_
-    print(grad_two)
-
-    print(np.outer(norm_prob_, norm_prob_))
-    print(prob_mat_ @ prob_mat_.T)
