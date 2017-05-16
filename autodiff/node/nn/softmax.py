@@ -9,12 +9,15 @@ import numpy as np
 class Softmax(Unitary):
 
     def __init__(self, log_prob):
-        assert len(log_prob.shape) == 1
+        '''
+        计算 Softmax
+            log_prob: 原始概率，格式为 [batch_size, num_classes]
+        '''
+        assert len(log_prob.shape) == 2
         super().__init__(log_prob, 'softmax')
-        # log_prob should be 1-D array
 
     def eval_op(self, log_prob):
-        log_prob -= np.max(log_prob)
+        log_prob -= np.max(log_prob, axis=0)
         norm_prob = np.exp(log_prob)
         return norm_prob / np.sum(norm_prob)
 
@@ -104,21 +107,58 @@ class SoftmaxLoss(Binary):
 
 if __name__ == "__main__":
 
-    log_prob_ = np.array([1, 2, 3])
-    log_prob_ -= np.max(log_prob_)
-    norm_prob_ = np.exp(log_prob_)
-    norm_prob_ /= np.sum(norm_prob_)
+    # log_prob_ = np.array([1, 2, 3])
+    # log_prob_ -= np.max(log_prob_)
+    # norm_prob_ = np.exp(log_prob_)
+    # norm_prob_ /= np.sum(norm_prob_)
+    #
+    # correct_ = np.array([0, 1, 0])
+    #
+    # # one step
+    # grad_one = np.copy(norm_prob_)
+    # grad_one[np.argmax(correct_)] -= 1
+    # print(grad_one)
+    #
+    # # two step
+    # prob_mat_ = norm_prob_.reshape(norm_prob_.shape + (1,))
+    # prob_eye_ = np.diag(norm_prob_)
+    # grad_norm_ = prob_eye_ - prob_mat_ @ prob_mat_.T
+    #
+    # grad_loss_ = np.zeros(norm_prob_.shape)
+    # grad_loss_[np.argmax(correct_)] = -1.0 / norm_prob_[np.argmax(correct_)]
+    # grad_two = grad_norm_ @ grad_loss_
+    # print(grad_two)
+    #
+    # print(np.outer(norm_prob_, norm_prob_))
+    # print(prob_mat_ @ prob_mat_.T)
 
-    correct_ = np.array([0, 1, 0])
+    batch_size_, num_classes_ = 2, 3
+    line_wise_ = (batch_size_, 1)
+
+    log_prob_ = np.array([[1, 2, 3],[4, 5, 3]])
+    max_prob_ = np.max(log_prob_, axis=1).reshape(line_wise_)
+    log_prob_ -= max_prob_
+
+    norm_prob_ = np.exp(log_prob_)
+    sum_prob_ = np.sum(norm_prob_, axis=1).reshape(line_wise_)
+    norm_prob_ /= sum_prob_
+
+    correct_ = np.array([[0, 1, 0],[0, 1, 0]])
+
+    max_idx = np.arange(2)
+    max_idx *= 3
+    max_idx += np.argmax(correct_, axis=1)
 
     # one step
     grad_one = np.copy(norm_prob_)
-    grad_one[np.argmax(correct_)] -= 1
+    grad_one.ravel()[max_idx] -= 1
     print(grad_one)
 
     # two step
     prob_mat_ = norm_prob_.reshape(norm_prob_.shape + (1,))
     prob_eye_ = np.diag(norm_prob_)
+
+    print()
     grad_norm_ = prob_eye_ - prob_mat_ @ prob_mat_.T
 
     grad_loss_ = np.zeros(norm_prob_.shape)

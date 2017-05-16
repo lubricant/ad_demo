@@ -3,7 +3,7 @@
 from .base import PipelineLayer
 
 
-class FullyConnLayer(PipelineLayer):
+class SoftmaxLayer(PipelineLayer):
 
     def __init__(self, input_layer, *args):
         assert isinstance(input_layer, PipelineLayer)
