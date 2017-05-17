@@ -7,7 +7,7 @@ from .unit import Const, Variable
 from .binary import Binary
 from .unitary import Unitary
 
-from .op.reduce import Mean, Sum, Prod
+from .op.reduce import Mean, Sum
 from .op.comp import Max, Min
 from .op.dot import MatMul
 from .op.plus import Plus, Minus, Neg

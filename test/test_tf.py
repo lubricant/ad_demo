@@ -160,4 +160,4 @@ def test_reduce2(func):
 
 # test_reduce2(tf.reduce_mean)
 # test_reduce2(tf.reduce_sum)
-test_reduce2(tf.reduce_prod)
+
