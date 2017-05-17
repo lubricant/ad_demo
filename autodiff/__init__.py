@@ -45,11 +45,6 @@ def sum(x, axis=None):
     return node.Sum(x, axis)
 
 
-def prod(x, axis=None):
-    x = __ensure_node(x)
-    return node.Prod(x, axis)
-
-
 def log(x):
     x = __ensure_node(x)
     return node.Log(x)
