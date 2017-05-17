@@ -107,12 +107,27 @@ print(c)
 print('--------------------------------')
 
 a = ad.var('a', np.arange(3*4*5*6, dtype=np.float32).reshape((3,4,5,6)))
-b = ad.mean(a, 1)
+
+op = ad.prod
+
+b = op(a, 0)
 ad.eval(b)
-print(b.shape, b.result.shape)
+# print(b.result)
 print(b.gradient)
 
-b = ad.mean(a, 2)
+
+b = op(a, 1)
 ad.eval(b)
-print(b.shape, b.result.shape)
+# print(b.result)
+print(b.gradient)
+
+
+b = op(a, 2)
+ad.eval(b)
+# print(b.result)
+print(b.gradient)
+
+b = op(a, 3)
+ad.eval(b)
+# print(b.result)
 print(b.gradient)

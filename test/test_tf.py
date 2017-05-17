@@ -130,20 +130,34 @@ def test_reduce2(func):
 
     a = tf.Variable(np.arange(3*4*5*6, dtype=np.float32).reshape((3,4,5,6)))
 
+    bb = func(a, reduction_indices=0)
     b = func(a, reduction_indices=1)
     c = func(a, reduction_indices=2)
+    cc = func(a, reduction_indices=3)
 
+    dd = tf.gradients(bb, [a])
     d = tf.gradients(b, [a])
     e = tf.gradients(c, [a])
+    ee = tf.gradients(cc, [a])
 
     sess.run(tf.global_variables_initializer())
+    ff = sess.run(dd)
     f = sess.run(d)
     g = sess.run(e)
+    gg = sess.run(ee)
 
-    print(sess.run(b))
+    # print(sess.run(bb))
+    print(ff)
+
+    # print(sess.run(b))
     print(f)
 
-    print(sess.run(c))
+    # print(sess.run(c))
     print(g)
 
-test_reduce2(tf.reduce_mean)
+    # print(sess.run(cc))
+    print(gg)
+
+# test_reduce2(tf.reduce_mean)
+# test_reduce2(tf.reduce_sum)
+test_reduce2(tf.reduce_prod)
