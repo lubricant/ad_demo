@@ -35,6 +35,21 @@ def min(a, b):
     return node.Min(a, b)
 
 
+def mean(x, axis=None):
+    x = __ensure_node(x)
+    return node.Mean(x, axis)
+
+
+def sum(x, axis=None):
+    x = __ensure_node(x)
+    return node.Sum(x, axis)
+
+
+def prod(x, axis=None):
+    x = __ensure_node(x)
+    return node.Prod(x, axis)
+
+
 def log(x):
     x = __ensure_node(x)
     return node.Log(x)

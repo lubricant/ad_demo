@@ -84,5 +84,66 @@ def test2d_pool(batch_, stride=None):
     print(f[0])
     # print('---------------------------------------------')
 
-test2d_pool(3)
+# test2d_pool(3)
 # test2d_pool(2)
+
+
+def test_reduce():
+    a = tf.Variable([1., 2, 3, 2, 1.])
+    b = tf.reduce_mean(a)
+    c = tf.gradients(b, [a])
+
+    sess.run(tf.global_variables_initializer())
+    e = sess.run(c)
+
+    print(e)
+    print(c)
+
+    b = tf.reduce_sum(a)
+    c = tf.gradients(b, [a])
+
+    sess.run(tf.global_variables_initializer())
+    e = sess.run(c)
+
+    print(e)
+    print(c)
+
+    b = tf.reduce_prod(a)
+    c = tf.gradients(b, [a])
+
+    sess.run(tf.global_variables_initializer())
+    e = sess.run(c)
+
+    print(e)
+    print(c)
+
+# test_reduce()
+
+
+def test_reduce2(func):
+    # a = tf.Variable([
+    #     [1, 2, 3, 2, 1.],
+    #     [2, 1, 5, 1, 2.]])
+    #
+    # b = func(a, reduction_indices=0)
+    # c = func(a, reduction_indices=1)
+
+    a = tf.Variable(np.arange(3*4*5*6, dtype=np.float32).reshape((3,4,5,6)))
+
+    b = func(a, reduction_indices=1)
+    c = func(a, reduction_indices=2)
+
+    d = tf.gradients(b, [a])
+    e = tf.gradients(c, [a])
+
+    sess.run(tf.global_variables_initializer())
+    f = sess.run(d)
+    g = sess.run(e)
+
+    print(sess.run(b))
+    print(f)
+
+    print(sess.run(c))
+    print(g)
+
+test_reduce2(tf.reduce_mean)
