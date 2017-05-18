@@ -3,6 +3,12 @@ import numpy as np
 import autodiff as ad
 
 
+class EndpointLayer(object):
+
+    def feed(self, data):
+        raise NotImplementedError
+
+
 class PipelineLayer(object):
 
     def __init__(self, name, shape, pre_order=None):
