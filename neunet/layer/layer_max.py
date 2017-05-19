@@ -13,7 +13,7 @@ class SoftmaxLayer(EndpointLayer, PipelineLayer):
         assert len(input_shape) == 2
 
         batch_size, classes_num = input_shape
-        super(PipelineLayer).__init__('SAX', (classes_num,), input_order)
+        super().__init__('SAX', (classes_num,), input_order)
 
         self._expect = ad.const((batch_size,))
         self._input = input_layer.output

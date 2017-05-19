@@ -12,7 +12,7 @@ class FullyConnLayer(PipelineLayer, ParametricLayer):
         input_order = input_layer.order
         input_shape = input_layer.shape
         hidden_shape = input_shape[-1], neuron_num
-        super(PipelineLayer).__init__('FC', hidden_shape, input_order)
+        super().__init__('FC', hidden_shape, input_order)
 
         order = self._order
         scale = 1. / np.sqrt(sum(hidden_shape))
