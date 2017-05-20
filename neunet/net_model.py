@@ -11,7 +11,7 @@ from neunet import ClassifierModel
 from neunet.layer import *
 
 
-class NeuralNetwork(ClassifierModel):
+class BinaryNeuralNetwork(ClassifierModel):
 
     def __init__(self, batch_size):
         input_layer = InputLayer((batch_size, 2))

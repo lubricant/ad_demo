@@ -2,69 +2,77 @@
 import numpy as np
 import autodiff as ad
 
-from neunet import NeuralNetwork
+from neunet import *
 
 
-class SGDTrainer(object):
+class SGDTrainer(ModelTrainer):
 
-    def __init__(self, net,
-                 batch_size, epoch_num,
+    def __init__(self, network_model,
+                 batch_size, epoch_num, feature_set, label_set,
                  step=0.01, momentum=0, l1_decay=0, l2_decay=0):
 
-        assert isinstance(net, NeuralNetwork)
-        self.net = net
+        assert epoch_num > 0
 
-        self.step = step if step else 0.01
-        self.momentum = momentum if momentum else 0.
-        self.l1_decay = l1_decay if l1_decay else 0.
-        self.l2_decay = l2_decay if l2_decay else 0.
+        super().__init__(network_model)
+        self._data = DataSet(feature_set, batch_size).attach_data(label_set)
+        self._iter = iter(self._data)
+        self._epoch = epoch_num
+        self._batch = batch_size
+
+        self._step = step if step else 0.01
+        self._momentum = momentum if momentum else 0.
+        self._l1_decay = l1_decay if l1_decay else 0.
+        self._l2_decay = l2_decay if l2_decay else 0.
 
         if momentum > 0:
-            self.momentum_cache = [np.zeros(w.shape) for w in net.weight]
+            self._momentum_cache = {}
 
-        assert self.step >= 0 and self.momentum >= 0 and l1_decay >= 0 and l2_decay >= 0
+        assert self._step >= 0 and self._momentum >= 0 and l1_decay >= 0 and l2_decay >= 0
 
-    def update(self, batch):
+    def update_model(self):
 
-        net = self.net
+        def next_batch():
+            try:
+                return next(self._iter)
+            except StopIteration:
+                self._epoch -= 1
+                if self._epoch > 0:
+                    self._iter = iter(self._data)
+                else:
+                    raise StopIteration
 
-        x, y = net.input, net.expect
-        weight = net.weight
-        loss = net.loss
+        network = self._model
+        data, label = next_batch()
 
-        batch_num = len(batch)
-        layer_num = len(weight)
-
-        loss_sum = 0
-        grad_sum = [np.zeros(w.shape) for w in weight]
-        for feature, label in batch:
-            x.value = feature
-            y.value = label
-
-            ad.eval(loss)
-            loss_sum += loss.result
-            for i in range(layer_num):
-                w_grad, = weight[i].gradient
-                grad_sum[i] += w_grad
+        batch_size = self._batch
+        step, momentum = self._step, self._momentum
+        l1_decay, l2_decay = self._l1_decay, self._l2_decay
 
         l1_loss, l2_loss = 0, 0
-        l1_decay, l2_decay = self.l1_decay, self.l2_decay
-        for i in range(layer_num):
-            w = weight[i]
+        data_loss = network.eval_loss(data, label) / batch_size
+
+        for param, grad in network.list_param_and_grad():
+            param_val = param.value
+            param_grad = grad / batch_size
+
+            l1_grad, l2_grad = 0, 0
             if l1_decay > 0:
-                l1_loss += l1_decay * np.linalg.norm(w.value, 1)
-                grad_sum[i] += l1_decay * np.sign(w.value)
+                l1_loss += l1_decay * np.linalg.norm(param_val, 1)
+                l1_grad = l1_decay * np.sign(param_val)
             if l2_decay > 0:
-                l2_loss += l2_decay * np.linalg.norm(w.value, 2) / 2.
-                grad_sum[i] += l2_decay * w.value
+                l2_loss += l2_decay * np.linalg.norm(param_val, 2) / 2.
+                l2_grad = l2_decay * param_val
 
-        for i in range(layer_num):
-            weight_grad = grad_sum[i] / batch_num
-            if self.momentum > 0:
-                weight_momentum = self.momentum * self.momentum_cache[i] - self.step * weight_grad
-                weight[i].value += weight_momentum
-                self.momentum_cache[i] = weight_momentum
+            param_grad += l1_grad
+            param_grad += l2_grad
+
+            if momentum > 0:
+                momentum_cache = self._momentum_cache
+                param_momentum = momentum * momentum_cache[param] - step * param_grad
+                param.value += param_momentum
+                momentum_cache[param] = param_momentum
             else:
-                weight[i].value += -self.step * weight_grad
+                param.value += -step * param_grad
 
-        return (loss_sum + l1_loss + l2_loss) / batch_num
+        return data_loss, l1_loss, l2_loss
+

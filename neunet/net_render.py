@@ -85,7 +85,7 @@ def init_btn():
     buttons[2].on_clicked(spiral_data)
 
 
-class MatplotModelRender(ModelRender):
+class MatplotRender(ModelRender):
 
     fig, ax = plt.subplots()
 

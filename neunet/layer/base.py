@@ -23,7 +23,7 @@ class PipelineLayer(object):
 
     def eval(self, need_grad=False):
         ad.eval(self._output, need_grad)
-        return self._output.result
+        return se
 
     @property
     def output(self):
