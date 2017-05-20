@@ -159,5 +159,5 @@ class MatplotModelRender(ModelRender):
 
 
 if __name__ == '__main__':
-    from neunet import BinaryClassifierModel
-    MatplotModelRender(BinaryClassifierModel()).render()
+    from neunet import ClassifierModel
+    MatplotModelRender(ClassifierModel()).render()

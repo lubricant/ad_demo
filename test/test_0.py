@@ -108,7 +108,7 @@ print('--------------------------------')
 
 a = ad.var('a', np.arange(3*4*5*6, dtype=np.float32).reshape((3,4,5,6)))
 
-op = ad.prod
+op = ad.sum
 
 b = op(a, 0)
 ad.eval(b)

@@ -7,11 +7,11 @@
 import numpy as np
 import autodiff as ad
 
-from neunet import BinaryClassifierModel
+from neunet import ClassifierModel
 from neunet.layer import *
 
 
-class NeuralNetwork(BinaryClassifierModel):
+class NeuralNetwork(ClassifierModel):
 
     def __init__(self, batch_size):
         input_layer = InputLayer((batch_size, 2))
@@ -21,10 +21,9 @@ class NeuralNetwork(BinaryClassifierModel):
         active_layer2 = ActiveLayer(hidden_layer2, ad.tanh)
         softmax_layer = SoftmaxLayer(active_layer2)
 
-        self._param_layers = [hidden_layer1, hidden_layer2]
-
         self._data_layer = input_layer
         self._loss_layer = softmax_layer
+        self._param_layers = [hidden_layer1, hidden_layer2]
         self._score_layers = [input_layer,
                               hidden_layer1,
                               active_layer1,
@@ -36,13 +35,13 @@ class NeuralNetwork(BinaryClassifierModel):
         loss = str(self._loss_layer)
         return 'score: %s \n loss: %s ' % (score, loss)
 
-    def predict(self, x):
+    def eval_score(self, x):
         assert isinstance(x, (list, np.ndarray))
         s_in, s_out = self._score_layers[0], self._score_layers[-1]
         s_in.feed(np.array(x)[np.newaxis, :])
         return np.argmax(s_out.eval(), axis=1)
 
-    def eval_data_loss(self, batch_data, batch_label):
+    def eval_loss(self, batch_data, batch_label):
         data_placeholder = self._data_layer
         data_placeholder.feed(batch_data)
 
@@ -52,7 +51,7 @@ class NeuralNetwork(BinaryClassifierModel):
         data_loss = loss_func.eval(need_grad=True)
         return np.mean(data_loss, axis=1)
 
-    def fetch_param_and_grad(self):
+    def list_param_and_grad(self):
         pg_list = []
         for layer in self._param_layers:
             assert isinstance(layer, ParametricLayer)

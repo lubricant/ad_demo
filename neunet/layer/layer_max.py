@@ -4,7 +4,7 @@ import autodiff as ad
 from .base import EndpointLayer, PipelineLayer
 
 
-class SoftmaxLayer(EndpointLayer, PipelineLayer):
+class SoftmaxLayer(PipelineLayer, EndpointLayer):
 
     def __init__(self, input_layer, *args):
         assert isinstance(input_layer, PipelineLayer)

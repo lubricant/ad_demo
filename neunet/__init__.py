@@ -1,6 +1,6 @@
 
 
-from .base import BinaryClassifierModel
+from .base import ClassifierModel
 from .base import ModelTrainer
 from .base import ModelRender
 
