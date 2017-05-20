@@ -12,16 +12,16 @@ class FullyConnLayer(PipelineLayer, ParametricLayer):
         input_order = input_layer.order
         input_shape = input_layer.shape
         hidden_shape = input_shape[-1], neuron_num
-        super().__init__('FC', hidden_shape, input_order)
 
-        order = self._order
         scale = 1. / np.sqrt(sum(hidden_shape))
-        self._bias = ad.var('FC_%d/bias' % order, np.zeros((neuron_num,)))
-        self._weight = ad.var('FC_%d/weight' % order, np.random.normal(0.0, scale, hidden_shape))
+        self._bias = ad.var('FC{bias}', np.zeros((neuron_num,)))
+        self._weight = ad.var('FC{weight}', np.random.normal(0.0, scale, hidden_shape))
 
         w, b = self._weight, self._bias
-        self._input = input_layer.output
-        self._output = self._input @ w + b
+        x = input_layer.output
+        y = x @ w + b
+
+        super().__init__('FC', x, y, input_order)
 
     def param(self):
         return self._weight, self._bias

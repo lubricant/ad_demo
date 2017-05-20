@@ -1,4 +1,5 @@
 
+from autodiff.node.node import Node
 from autodiff.node.binary import Binary
 
 import numpy as np

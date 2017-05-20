@@ -7,8 +7,8 @@ from .base import EndpointLayer, PipelineLayer
 class InputLayer(EndpointLayer, PipelineLayer):
 
     def __init__(self, data_shape):
-        super().__init__('Input', data_shape)
-        self._output = self._input = ad.const(data_shape)
+        self._slot = ad.const(data_shape)
+        super().__init__('IN', self._slot, self._slot)
 
     def feed(self, data):
-        self._input.value = data
+        self._slot.value = data

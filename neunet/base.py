@@ -1,8 +1,8 @@
 
 class BinaryClassifierModel(object):
 
-    def predict(self, x, y):
-        return 1 if x == y else 0
+    def predict(self, x):
+        pass
 
 
 class ModelTrainer(object):

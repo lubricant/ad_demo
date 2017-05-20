@@ -11,14 +11,19 @@ class EndpointLayer(object):
 
 class PipelineLayer(object):
 
-    def __init__(self, name, shape, pre_order=None):
+    def __init__(self, name, in_expr, out_expr, pre_order=None):
         self._name = name
-        self._shape = shape
+        self._input = in_expr
+        self._output = out_expr
+        self._shape = out_expr.shape
         self._order = 0 if pre_order is None else pre_order + 1
-        self._input = self._output = None
 
     def __repr__(self):
         return self._name + ('' if not self._shape else str(list(self._shape)))
+
+    def eval(self, need_grad=False):
+        ad.eval(self._output, need_grad)
+        return self._output.result
 
     @property
     def output(self):

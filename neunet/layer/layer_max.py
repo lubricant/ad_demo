@@ -12,12 +12,11 @@ class SoftmaxLayer(EndpointLayer, PipelineLayer):
         input_shape = input_layer.shape
         assert len(input_shape) == 2
 
-        batch_size, classes_num = input_shape
-        super().__init__('SAX', (classes_num,), input_order)
-
+        batch_size, _ = input_shape
         self._expect = ad.const((batch_size,))
-        self._input = input_layer.output
-        self._output = ad.softmax(self._input, self._expect)
+        score = input_layer.output
+        loss = ad.softmax(score, self._expect)
+        super().__init__('SAX', score, loss, input_order)
 
     def feed(self, data):
         self._expect.value = data

@@ -9,5 +9,5 @@ from neunet import NeuralNetwork
 
 net = NeuralNetwork(3)
 print(net)
-
+print(net.fetch_param_and_grad())
 

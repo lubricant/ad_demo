@@ -92,6 +92,8 @@ def eval(x, need_grad=True):
 
 def __ensure_node(value):
 
+    assert value is not None
+
     if isinstance(value, tuple):
         value = tuple([__ensure_node(v) for v in value])
     elif not isinstance(value, node.Node):
