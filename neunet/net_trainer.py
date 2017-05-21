@@ -32,6 +32,9 @@ class SGDTrainer(ModelTrainer):
         if self._iter:
             del self._iter
 
+        feature_set = np.array(feature_set)
+        label_set = np.array(label_set)
+
         self._data = DataSet(feature_set, self._batch).attach_data(label_set)
         self._iter = iter(self._data)
 
@@ -54,16 +57,20 @@ class SGDTrainer(ModelTrainer):
 
                 self._iter = iter(self._data)
 
-        network = self._model
-        data, label = next_batch()
-        assert len(data) == len(label)
+        data = next_batch()
+        if not data:
+            return None
 
+        feature, label = data
+        assert len(feature) == len(label)
+
+        network = self._model
         batch_size = self._batch
         step, momentum = self._step, self._momentum
         l1_decay, l2_decay = self._l1_decay, self._l2_decay
 
         l1_loss, l2_loss = 0, 0
-        data_loss = network.eval_loss(data, label) / batch_size
+        data_loss = network.eval_loss(feature, label) / batch_size
 
         for param, grad in network.list_param_and_grad():
             param_val = param.value

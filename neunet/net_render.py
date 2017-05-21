@@ -88,10 +88,9 @@ class MatplotRender(ModelRender):
 
     fig, ax = plt.subplots()
 
-    def __init__(self, model, trainer, interval=10, each_train_times=10):
+    def __init__(self, model, trainer, interval=10):
         super().__init__(model, trainer)
 
-        self.each_train_times = each_train_times
         self.ani = animation.FuncAnimation(
             self.fig, lambda i: self.update_plot(), init_func=lambda: self.init_plot(), interval=interval, blit=True)
 
@@ -128,25 +127,29 @@ class MatplotRender(ModelRender):
 
         if buf:
             scat_pt = [[[], []], [[], []]]
-
+            feature_set, label_set = [], []
             for feature, label in buf:
                 scat_pt[label][0].append(feature[0])
                 scat_pt[label][1].append(feature[1])
+                feature_set.append(feature)
+                label_set.append(label)
 
             ax = self.ax
             scatter[:] = [
               ax.scatter(scat_pt[0][0], scat_pt[0][1], color='indianred', marker='o', linewidths=5),
               ax.scatter(scat_pt[1][0], scat_pt[1][1], color='seagreen', marker='o', linewidths=5)]
 
-            data[:] = buf
-            print('data', data)
+            trainer.update_data(
+                feature_set=feature_set,
+                label_set=label_set
+            )
             buf[:] = []
 
         loss = trainer.update_model()
         if loss is not None:
-            print(loss/self.each_train_times)
+            print('loss-status: ', loss)
 
-        colors = [clr.cnames['lightcoral' if model.eval_score([x,y]) else 'lightgreen'] for y in tick for x in tick]
+        colors = [clr.cnames['lightcoral' if model.eval_score([x, y]) else 'lightgreen'] for y in tick for x in tick]
         patches.set_color(colors)
 
         # print([model.predict(x, y) for y in tick for x in tick])

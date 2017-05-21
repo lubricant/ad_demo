@@ -64,7 +64,7 @@ class BinaryNeuralNetwork(ClassifierModel):
         loss_func.feed(batch_label)
 
         data_loss = loss_func.eval(need_grad=True)
-        return np.mean(data_loss, axis=1)
+        return np.mean(data_loss)
 
     def list_param_and_grad(self):
         pg_list = []
@@ -73,6 +73,7 @@ class BinaryNeuralNetwork(ClassifierModel):
             param, grad = layer.param(), layer.grad()
             assert len(param) == len(grad)
             pg_list += [x for x in zip(param, grad)]
+
         return pg_list
 
 

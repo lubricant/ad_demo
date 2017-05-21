@@ -36,5 +36,5 @@ class FullyConnLayer(PipelineLayer, ParametricLayer):
         return self._weight, self._bias
 
     def grad(self):
-        return self._weight.gradient, self._bias.gradient
+        return self._weight.gradient[0], self._bias.gradient[0]
 
