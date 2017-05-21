@@ -63,6 +63,12 @@ class BinaryNeuralNetwork(ClassifierModel):
         loss_func = self._loss_layer
         loss_func.feed(batch_label)
 
+        # hide1 = self._param_layers[0].param()[1]
+        # hide2 = self._score_layers[1].param()[1]
+        # print('hide1: ', hide1.value)
+        # print('hide2: ', hide2.value)
+        # print('----------------------------------------------')
+
         data_loss = loss_func.eval(need_grad=True)
         return np.mean(data_loss)
 

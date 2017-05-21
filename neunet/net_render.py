@@ -139,11 +139,11 @@ class MatplotRender(ModelRender):
               ax.scatter(scat_pt[0][0], scat_pt[0][1], color='indianred', marker='o', linewidths=5),
               ax.scatter(scat_pt[1][0], scat_pt[1][1], color='seagreen', marker='o', linewidths=5)]
 
+            buf[:] = []
             trainer.update_data(
                 feature_set=feature_set,
                 label_set=label_set
             )
-            buf[:] = []
 
         loss = trainer.update_model()
         if loss is not None:
