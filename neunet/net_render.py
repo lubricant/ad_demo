@@ -43,18 +43,17 @@ def init_data(_):
         (np.array([3.9832, 0.3044]), 0),
         (np.array([1.8636, 0.1677]), 0),
         (np.array([0.5, 3.2]), 1),
-        (np.array([0.8, 3.2]), 1),
         (np.array([1.0, -2.2]), 1)]
 
 
 def circle_data(_):
     data = []
-    for i in range(50):
+    for i in range(12):
         t = (np.random.rand() - 0.5) * np.pi
         r = (np.random.rand() - 0.5) * 2.
         data.append((r * np.array([np.sin(t), np.cos(t)]), 1))
 
-    for i in range(50):
+    for i in range(12):
         t = (np.random.rand() - 0.5) * np.pi
         r = (np.random.rand() - 0.5)
         r += np.sign(r) * 2.5
@@ -64,11 +63,11 @@ def circle_data(_):
 
 def spiral_data(_):
     data = []
-    for theta in np.linspace(0, 3 * np.pi, num=50):
+    for theta in np.linspace(0, 3 * np.pi, num=12):
         r = (theta ** 2) / 25
         data.append((np.array([r * np.cos(theta), r * np.sin(theta)]), 0))
 
-    for theta in np.linspace(0, 3*np.pi, num=50):
+    for theta in np.linspace(0, 3*np.pi, num=12):
         r = (theta ** 2) / 25
         data.append((np.array([r * np.cos(theta + np.pi), r * np.sin(theta + np.pi)]), 1))
     buf[:] = data
@@ -125,6 +124,8 @@ class MatplotRender(ModelRender):
 
     def update_plot(self):
 
+        model, trainer = self._model, self._trainer
+
         if buf:
             scat_pt = [[[], []], [[], []]]
 
@@ -138,19 +139,14 @@ class MatplotRender(ModelRender):
               ax.scatter(scat_pt[1][0], scat_pt[1][1], color='seagreen', marker='o', linewidths=5)]
 
             data[:] = buf
+            print('data', data)
             buf[:] = []
 
-        model, trainer = self._model, self._trainer
-        loss = trainer.update(data)
-
-        if loss is not None:
-            for i in range(self.each_train_times):
-                loss += trainer.update(data)
-
+        loss = trainer.update_model()
         if loss is not None:
             print(loss/self.each_train_times)
 
-        colors = [clr.cnames['lightcoral' if model.predict(x, y) else 'lightgreen'] for y in tick for x in tick]
+        colors = [clr.cnames['lightcoral' if model.eval_score(x) else 'lightgreen'] for y in tick for x in tick]
         patches.set_color(colors)
 
         # print([model.predict(x, y) for y in tick for x in tick])

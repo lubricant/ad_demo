@@ -37,6 +37,9 @@ class SGDTrainer(ModelTrainer):
 
     def update_model(self):
 
+        if not self._data:
+            return None
+
         def next_batch():
             try:
                 assert self._iter is not None
@@ -53,6 +56,7 @@ class SGDTrainer(ModelTrainer):
 
         network = self._model
         data, label = next_batch()
+        assert len(data) == len(label)
 
         batch_size = self._batch
         step, momentum = self._step, self._momentum
