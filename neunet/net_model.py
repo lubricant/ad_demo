@@ -14,6 +14,10 @@ from neunet.layer import *
 class BinaryNeuralNetwork(ClassifierModel):
 
     def __init__(self, batch_size):
+
+        assert batch_size > 0
+        self._batch_size = batch_size
+
         input_layer = InputLayer((batch_size, 2))
         hidden_layer1 = FullyConnLayer(input_layer, 6)
         active_layer1 = ActiveLayer(hidden_layer1, ad.tanh)
@@ -23,12 +27,23 @@ class BinaryNeuralNetwork(ClassifierModel):
 
         self._data_layer = input_layer
         self._loss_layer = softmax_layer
-        self._param_layers = [hidden_layer1, hidden_layer2]
-        self._score_layers = [input_layer,
-                              hidden_layer1,
-                              active_layer1,
-                              hidden_layer2,
-                              active_layer2]
+        self._param_layers = (hidden_layer1, hidden_layer2)
+
+        score_input_layer = InputLayer((2,))
+        score_hidden_layer1 = FullyConnLayer(score_input_layer, 6)
+        score_active_layer1 = ActiveLayer(score_hidden_layer1, ad.tanh)
+        score_hidden_layer2 = FullyConnLayer(score_active_layer1, 2)
+        score_active_layer2 = ActiveLayer(score_hidden_layer2, ad.tanh)
+
+        score_hidden_layer1.replace(hidden_layer1.param())
+        score_hidden_layer2.replace(hidden_layer2.param())
+
+        self._score_io = (score_input_layer, score_active_layer2)
+        self._score_layers = (score_input_layer,
+                              score_hidden_layer1,
+                              score_active_layer1,
+                              score_hidden_layer2,
+                              score_active_layer2)
 
     def __repr__(self):
         score = ' => '.join([str(l) for l in self._score_layers])
@@ -37,9 +52,9 @@ class BinaryNeuralNetwork(ClassifierModel):
 
     def eval_score(self, x):
         assert isinstance(x, (list, np.ndarray))
-        s_in, s_out = self._score_layers[0], self._score_layers[-1]
-        s_in.feed(np.array(x)[np.newaxis, :])
-        return np.argmax(s_out.eval(), axis=1)
+        s_in, s_out = self._score_io
+        s_in.feed(np.array(x))
+        return np.argmax(s_out.eval())
 
     def eval_loss(self, batch_data, batch_label):
         data_placeholder = self._data_layer

@@ -23,7 +23,7 @@ class PipelineLayer(object):
 
     def eval(self, need_grad=False):
         ad.eval(self._output, need_grad)
-        return se
+        return self._output.result
 
     @property
     def output(self):
@@ -44,11 +44,15 @@ class PipelineLayer(object):
 
 class ParametricLayer(object):
 
+    def replace(self, param):
+        raise NotImplementedError
+
     def param(self):
         raise NotImplementedError
 
     def grad(self):
         raise NotImplementedError
+
 
 
 

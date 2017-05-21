@@ -23,6 +23,15 @@ class FullyConnLayer(PipelineLayer, ParametricLayer):
 
         super().__init__('FC', x, y, input_order)
 
+    def replace(self, param):
+        assert len(param) == 2
+        new_weight, new_bias = param
+        assert new_weight is not None
+        assert new_bias is not None
+        assert new_weight.shape == self._weight.shape
+        assert new_bias.shape == self._bias.shape
+        self._weight, self._bias = param
+
     def param(self):
         return self._weight, self._bias
 

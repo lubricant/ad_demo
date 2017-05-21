@@ -146,7 +146,7 @@ class MatplotRender(ModelRender):
         if loss is not None:
             print(loss/self.each_train_times)
 
-        colors = [clr.cnames['lightcoral' if model.eval_score(x) else 'lightgreen'] for y in tick for x in tick]
+        colors = [clr.cnames['lightcoral' if model.eval_score([x,y]) else 'lightgreen'] for y in tick for x in tick]
         patches.set_color(colors)
 
         # print([model.predict(x, y) for y in tick for x in tick])
