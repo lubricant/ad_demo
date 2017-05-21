@@ -13,15 +13,15 @@ from neunet.layer import *
 
 class BinaryNeuralNetwork(ClassifierModel):
 
-    def __init__(self, batch_size):
+    def __init__(self, batch_size, rand_seed=None):
 
         assert batch_size > 0
         self._batch_size = batch_size
 
         input_layer = InputLayer((batch_size, 2))
-        hidden_layer1 = FullyConnLayer(input_layer, 6)
+        hidden_layer1 = FullyConnLayer(input_layer, 6, rand_seed)
         active_layer1 = ActiveLayer(hidden_layer1, ad.tanh)
-        hidden_layer2 = FullyConnLayer(active_layer1, 2)
+        hidden_layer2 = FullyConnLayer(active_layer1, 2, rand_seed)
         active_layer2 = ActiveLayer(hidden_layer2, ad.tanh)
         softmax_layer = SoftmaxLayer(active_layer2)
 

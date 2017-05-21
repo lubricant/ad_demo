@@ -7,15 +7,16 @@ from .base import PipelineLayer, ParametricLayer
 
 class FullyConnLayer(PipelineLayer, ParametricLayer):
 
-    def __init__(self, input_layer, neuron_num, *args):
+    def __init__(self, input_layer, neuron_num, rand_seed=None, *args):
         assert isinstance(input_layer, PipelineLayer)
         input_order = input_layer.order
         input_shape = input_layer.shape
         hidden_shape = input_shape[-1], neuron_num
 
+        rand = np.random if rand_seed is None else np.random.RandomState(rand_seed)
         scale = 1. / np.sqrt(sum(hidden_shape))
         self._bias = ad.var('FC{bias}', np.zeros((neuron_num,)))
-        self._weight = ad.var('FC{weight}', np.random.normal(0.0, scale, hidden_shape))
+        self._weight = ad.var('FC{weight}', rand.normal(0.0, scale, hidden_shape))
 
         w, b = self._weight, self._bias
         x = input_layer.output
