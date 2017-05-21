@@ -7,15 +7,14 @@ from neunet import *
 
 class SGDTrainer(ModelTrainer):
 
-    def __init__(self, network_model,
-                 batch_size, epoch_num, feature_set, label_set,
+    def __init__(self, network_model, batch_size, epoch_num=-1,
                  step=0.01, momentum=0, l1_decay=0, l2_decay=0):
 
-        assert epoch_num > 0
+        assert batch_size > 0 and epoch_num is not None
 
         super().__init__(network_model)
-        self._data = DataSet(feature_set, batch_size).attach_data(label_set)
-        self._iter = iter(self._data)
+        self._data = None
+        self._iter = None
         self._epoch = epoch_num
         self._batch = batch_size
 
@@ -29,17 +28,28 @@ class SGDTrainer(ModelTrainer):
 
         assert self._step >= 0 and self._momentum >= 0 and l1_decay >= 0 and l2_decay >= 0
 
+    def update_data(self, feature_set, label_set):
+        if self._iter:
+            del self._iter
+
+        self._data = DataSet(feature_set, self._batch).attach_data(label_set)
+        self._iter = iter(self._data)
+
     def update_model(self):
 
         def next_batch():
             try:
+                assert self._iter is not None
                 return next(self._iter)
+
             except StopIteration:
-                self._epoch -= 1
+
                 if self._epoch > 0:
-                    self._iter = iter(self._data)
-                else:
-                    raise StopIteration
+                    self._epoch -= 1
+                    if not self._epoch:
+                        raise StopIteration
+
+                self._iter = iter(self._data)
 
         network = self._model
         data, label = next_batch()
@@ -69,8 +79,8 @@ class SGDTrainer(ModelTrainer):
             if momentum > 0:
                 momentum_cache = self._momentum_cache
                 param_momentum = momentum * momentum_cache[param] - step * param_grad
-                param.value += param_momentum
                 momentum_cache[param] = param_momentum
+                param.value += param_momentum
             else:
                 param.value += -step * param_grad
 

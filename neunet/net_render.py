@@ -96,7 +96,7 @@ class MatplotRender(ModelRender):
         self.ani = animation.FuncAnimation(
             self.fig, lambda i: self.update_plot(), init_func=lambda: self.init_plot(), interval=interval, blit=True)
 
-    def render(self):
+    def render_model(self):
         plt.show()
 
     def init_plot(self):
@@ -140,7 +140,7 @@ class MatplotRender(ModelRender):
             data[:] = buf
             buf[:] = []
 
-        model, trainer = self.model, self.trainer
+        model, trainer = self._model, self._trainer
         loss = trainer.update(data)
 
         if loss is not None:
@@ -159,5 +159,4 @@ class MatplotRender(ModelRender):
 
 
 if __name__ == '__main__':
-    from neunet import ClassifierModel
-    MatplotModelRender(ClassifierModel()).render()
+    pass

@@ -21,6 +21,9 @@ class ModelTrainer(object):
     def update_model(self):
         raise NotImplementedError
 
+    def update_data(self, **data):
+        raise NotImplementedError
+
 
 class ModelRender(object):
 
@@ -106,12 +109,3 @@ class DataSet(object):
 
             if data_last and not flip_data:
                 yield data_last
-
-ds = DataSet([1,2,3,4,5], 2)
-it = iter(ds)
-try:
-    while True:
-        val = next(it)
-        print(val)
-except StopIteration:
-    pass
