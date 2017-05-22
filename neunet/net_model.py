@@ -30,13 +30,10 @@ class BinaryNeuralNetwork(ClassifierModel):
         self._param_layers = (hidden_layer1, hidden_layer2)
 
         score_input_layer = InputLayer((2,))
-        score_hidden_layer1 = FullyConnLayer(score_input_layer, 6)
+        score_hidden_layer1 = FullyConnLayer(score_input_layer, 6, reuse_param=hidden_layer1.param())
         score_active_layer1 = ActiveLayer(score_hidden_layer1, ad.tanh)
-        score_hidden_layer2 = FullyConnLayer(score_active_layer1, 2)
+        score_hidden_layer2 = FullyConnLayer(score_active_layer1, 2, reuse_param=hidden_layer2.param())
         score_active_layer2 = ActiveLayer(score_hidden_layer2, ad.tanh)
-
-        score_hidden_layer1.replace(hidden_layer1.param())
-        score_hidden_layer2.replace(hidden_layer2.param())
 
         self._score_io = (score_input_layer, score_active_layer2)
         self._score_layers = (score_input_layer,

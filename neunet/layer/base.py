@@ -44,9 +44,6 @@ class PipelineLayer(object):
 
 class ParametricLayer(object):
 
-    def replace(self, param):
-        raise NotImplementedError
-
     def param(self):
         raise NotImplementedError
 
