@@ -104,7 +104,7 @@ if __name__ == '__main__':
     # f.feed(y)
     f0_hi = f.eval()
 
-    x0_g = (f0_hi - f0_lo) / 2*h
+    x0_g = (f0_hi - f0_lo) / (2 * h)
 
     # evaluate numeric gradient of x1
     x1_lo, x1_hi = np.array([[2, 3- h]]), np.array([[2, 3 + h]])
@@ -117,7 +117,7 @@ if __name__ == '__main__':
     # f.feed(y)
     f1_hi = f.eval()
 
-    x1_g = (f1_hi - f1_lo) / 2 * h
+    x1_g = (f1_hi - f1_lo) / (2 * h)
 
     # combine gradient
     print(np.hstack((x0_g, x1_g)))
