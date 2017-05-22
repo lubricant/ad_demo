@@ -60,12 +60,6 @@ class BinaryNeuralNetwork(ClassifierModel):
         loss_func = self._loss_layer
         loss_func.feed(batch_label)
 
-        # hide1 = self._param_layers[0].param()[1]
-        # hide2 = self._score_layers[1].param()[1]
-        # print('hide1: ', hide1.value)
-        # print('hide2: ', hide2.value)
-        # print('----------------------------------------------')
-
         data_loss = loss_func.eval(need_grad=True)
         return np.mean(data_loss)
 
@@ -80,6 +74,53 @@ class BinaryNeuralNetwork(ClassifierModel):
         return pg_list
 
 
+if __name__ == '__main__':
+    a = InputLayer((1, 2), True)
+    b = FullyConnLayer(a, 6, rand_seed=0)
+    c = ActiveLayer(b, ad.tanh)
+    d = FullyConnLayer(c, 2, rand_seed=0)
+    e = ActiveLayer(d, ad.tanh)
+    f = SoftmaxLayer(e)
+
+    x, y = np.array([[2., 3.]]), np.array([1])
+    a.feed(x)
+    f.feed(y)
+    f.eval(True)
+    x_g = a.input.gradient
+    print(x_g)
+
+    # gradient checking
+
+    h = 10.e-5
+
+    # evaluate numeric gradient of x0
+    x0_lo, x0_hi = np.array([[2-h, 3]]), np.array([[2+h, 3]])
+
+    a.feed(x0_lo)
+    # f.feed(y)
+    f0_lo = f.eval()
+
+    a.feed(x0_hi)
+    # f.feed(y)
+    f0_hi = f.eval()
+
+    x0_g = (f0_hi - f0_lo) / 2*h
+
+    # evaluate numeric gradient of x1
+    x1_lo, x1_hi = np.array([[2, 3- h]]), np.array([[2, 3 + h]])
+
+    a.feed(x1_lo)
+    # f.feed(y)
+    f1_lo = f.eval()
+
+    a.feed(x1_hi)
+    # f.feed(y)
+    f1_hi = f.eval()
+
+    x1_g = (f1_hi - f1_lo) / 2 * h
+
+    # combine gradient
+    print(np.hstack((x0_g, x1_g)))
 
 
 
