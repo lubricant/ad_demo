@@ -23,24 +23,27 @@ class BinaryNeuralNetwork(ClassifierModel):
         active_layer1 = ActiveLayer(hidden_layer1, ad.tanh)
         hidden_layer2 = FullyConnLayer(active_layer1, 2, rand_seed)
         active_layer2 = ActiveLayer(hidden_layer2, ad.tanh)
-        softmax_layer = SoftmaxLayer(active_layer2)
+        output_layer = FullyConnLayer(active_layer2, 2, rand_seed)
+        softmax_layer = SoftmaxLayer(output_layer)
 
         self._data_layer = input_layer
         self._loss_layer = softmax_layer
-        self._param_layers = (hidden_layer1, hidden_layer2)
+        self._param_layers = (hidden_layer1, hidden_layer2, output_layer)
 
         score_input_layer = InputLayer((2,))
         score_hidden_layer1 = FullyConnLayer(score_input_layer, 6, reuse_param=hidden_layer1.param())
         score_active_layer1 = ActiveLayer(score_hidden_layer1, ad.tanh)
         score_hidden_layer2 = FullyConnLayer(score_active_layer1, 2, reuse_param=hidden_layer2.param())
         score_active_layer2 = ActiveLayer(score_hidden_layer2, ad.tanh)
+        score_output_layer = FullyConnLayer(score_active_layer2, 2, reuse_param=output_layer.param())
 
-        self._score_io = (score_input_layer, score_active_layer2)
+        self._score_io = (score_input_layer, score_output_layer)
         self._score_layers = (score_input_layer,
                               score_hidden_layer1,
                               score_active_layer1,
                               score_hidden_layer2,
-                              score_active_layer2)
+                              score_active_layer2,
+                              score_output_layer)
 
     def __repr__(self):
         score = ' => '.join([str(l) for l in self._score_layers])
@@ -80,12 +83,13 @@ if __name__ == '__main__':
     c = ActiveLayer(b, ad.tanh)
     d = FullyConnLayer(c, 2, rand_seed=0)
     e = ActiveLayer(d, ad.tanh)
-    f = SoftmaxLayer(e)
+    f = FullyConnLayer(e, 2, rand_seed=0)
+    g = SoftmaxLayer(f)
 
     x, y = np.array([[2., 3.]]), np.array([1])
     a.feed(x)
-    f.feed(y)
-    f.eval(True)
+    g.feed(y)
+    g.eval(True)
     x_g = a.input.gradient
     print(x_g)
 
@@ -98,11 +102,11 @@ if __name__ == '__main__':
 
     a.feed(x0_lo)
     # f.feed(y)
-    f0_lo = f.eval()
+    f0_lo = g.eval()
 
     a.feed(x0_hi)
     # f.feed(y)
-    f0_hi = f.eval()
+    f0_hi = g.eval()
 
     x0_g = (f0_hi - f0_lo) / (2 * h)
 
@@ -111,11 +115,11 @@ if __name__ == '__main__':
 
     a.feed(x1_lo)
     # f.feed(y)
-    f1_lo = f.eval()
+    f1_lo = g.eval()
 
     a.feed(x1_hi)
     # f.feed(y)
-    f1_hi = f.eval()
+    f1_hi = g.eval()
 
     x1_g = (f1_hi - f1_lo) / (2 * h)
 

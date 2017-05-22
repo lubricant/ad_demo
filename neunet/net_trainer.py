@@ -89,7 +89,11 @@ class SGDTrainer(ModelTrainer):
 
             if momentum > 0:
                 momentum_cache = self._momentum_cache
-                param_momentum = momentum * momentum_cache[param] - step * param_grad
+                if param not in momentum_cache:
+                    momentum_cache[param] = np.zeros(param.shape)
+
+                prev_momentum = momentum_cache[param]
+                param_momentum = momentum * prev_momentum - step * param_grad
                 momentum_cache[param] = param_momentum
                 param.value += param_momentum
             else:
